@@ -13,3 +13,62 @@ classify_encounter_task:
     1. stage: one of ELIGIBILITY_VERIFICATION, PRIOR_AUTHORIZATION, CODING_CHARGE_CAPTURE, CLAIMS_SUBMISSION, DENIAL_APPEAL
     2. reasoning: brief explanation of why this stage was chosen
     3. confidence: a number between 0 and 1 indicating classification confidence
+
+# Eligibility Verification Crew tasks
+eligibility_check_task:
+  description: "Check member eligibility with payer for date of service; return status, plan details, effective/term dates."
+  expected_output: "Eligibility result with eligible flag, plan_name, effective_date, termination_date, in_network, member_status."
+
+verify_benefits_task:
+  description: "Verify benefits for given procedure codes: covered/not covered, copay, coinsurance, deductible remaining."
+  expected_output: "Per-procedure benefits: covered, copay, coinsurance_pct, deductible_remaining."
+
+cob_check_task:
+  description: "Check coordination of benefits; detect secondary insurance (e.g. Medicare secondary for age 65+)."
+  expected_output: "has_secondary flag and secondary_note if applicable."
+
+flag_gaps_task:
+  description: "Flag coverage gaps from eligibility result: inactive, terminated, out-of-network."
+  expected_output: "List of gap description strings."
+
+# Prior Authorization Crew tasks
+extract_clinical_task:
+  description: "Extract clinical indicators from clinical notes: diagnoses, symptoms, failed treatments, medical necessity."
+  expected_output: "Structured clinical_indicators with diagnoses, symptoms, medical_necessity_indicators, summary."
+
+search_policy_task:
+  description: "Search payer medical policies for procedure code; return relevant policy snippets."
+  expected_output: "List of policy snippet strings."
+
+assemble_auth_task:
+  description: "Assemble prior auth packet from encounter, clinical indicators, and policy matches."
+  expected_output: "Structured auth packet (encounter_id, payer, procedure_codes, clinical_indicators, clinical_notes_excerpt, clinical_justification, policy_references)."
+
+submit_auth_task:
+  description: "Submit prior auth request; return auth_id and submitted status."
+  expected_output: "auth_id, status, submitted_at."
+
+poll_auth_task:
+  description: "Poll prior auth status by auth_id; return approved/denied/pending."
+  expected_output: "auth_id, status, decision, decision_date."
+
+# Coding and Charge Capture Crew tasks
+suggest_codes_task:
+  description: "Suggest ICD-10-CM and CPT codes from clinical notes and encounter type; return codes with confidence."
+  expected_output: "icd_codes, cpt_codes, confidence, message."
+
+validate_combinations_task:
+  description: "Validate ICD/CPT code combinations against NCCI edits; return invalid pairs and modifier suggestions."
+  expected_output: "valid, invalid_pairs, modifier_suggestions."
+
+missing_charges_task:
+  description: "Identify missing charges: procedures documented but not coded, missing modifiers."
+  expected_output: "missing_codes, missing_charge_flags, documented_procedures, suggested_cpts."
+
+search_guidelines_task:
+  description: "Search coding guidelines by query; return relevant guideline snippets."
+  expected_output: "List of guideline snippet strings."
+
+reimbursement_task:
+  description: "Calculate expected reimbursement for CPT codes and payer from fee schedule."
+  expected_output: "per_code amounts, total_expected."
