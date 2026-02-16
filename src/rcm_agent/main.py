@@ -49,8 +49,8 @@ def process(ctx: click.Context, encounter_file: str) -> None:
         raise SystemExit(1)
     repo = _repo(ctx)
 
-    # Save as PENDING, then PROCESSING
-    repo.save_encounter(encounter, RcmStage.ELIGIBILITY_VERIFICATION, EncounterStatus.PENDING)
+    # Save as PENDING (INTAKE = unrouted), then PROCESSING
+    repo.save_encounter(encounter, RcmStage.INTAKE, EncounterStatus.PENDING)
     repo.update_status(
         encounter.encounter_id,
         EncounterStatus.PROCESSING,

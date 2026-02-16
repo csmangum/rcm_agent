@@ -1,6 +1,5 @@
-"""Stub crew dispatcher: returns mock EncounterOutput based on encounter data."""
+"""Stub crew dispatcher: returns mock EncounterOutput for unimplemented stages (CLAIMS_SUBMISSION, DENIAL_APPEAL)."""
 
-from rcm_agent.config.settings import DEFAULT_AUTH_REQUIRED_CPT
 from rcm_agent.models import (
     Encounter,
     EncounterOutput,
@@ -15,42 +14,16 @@ def run_stub_crew(
     override_stage: RcmStage | None = None,
 ) -> EncounterOutput:
     """
-    Determine a plausible RcmStage from encounter data and return a mock output.
-    When override_stage is set (e.g. from router), use that stage and a default status.
+    Return a mock output for the given stage. Used when router returns CLAIMS_SUBMISSION or DENIAL_APPEAL.
+    When override_stage is set, use that stage and a default status; otherwise fallback to CODED.
     """
-    auth_cpt = auth_required_cpt or DEFAULT_AUTH_REQUIRED_CPT
-    notes_lower = (encounter.clinical_notes or "").lower()
-    procedure_codes = {p.code for p in encounter.procedures}
-
     if override_stage is not None:
         stage = override_stage
         status, message = _default_status_for_stage(stage)
     else:
-        # Heuristics (mirror Phase 2 router logic)
-        if "denial" in notes_lower or "appeal" in notes_lower:
-            stage = RcmStage.DENIAL_APPEAL
-            status = EncounterStatus.NEEDS_REVIEW
-            message = "Stub: routed to denial/appeal (mentioned in notes)."
-        elif "lapsed" in notes_lower or "termination" in notes_lower:
-            stage = RcmStage.ELIGIBILITY_VERIFICATION
-            status = EncounterStatus.NOT_ELIGIBLE
-            message = "Stub: routed to eligibility verification; mock result: not eligible (coverage lapsed/terminated)."
-        elif "eligibility" in notes_lower:
-            stage = RcmStage.ELIGIBILITY_VERIFICATION
-            status = EncounterStatus.ELIGIBLE
-            message = "Stub: routed to eligibility verification; mock result: eligible."
-        elif procedure_codes & auth_cpt:
-            stage = RcmStage.PRIOR_AUTHORIZATION
-            status = EncounterStatus.AUTH_APPROVED
-            message = "Stub: procedure requires prior auth; mock result: approved."
-        elif encounter.type.value == "office_visit" and encounter.procedures and encounter.diagnoses:
-            stage = RcmStage.CODING_CHARGE_CAPTURE
-            status = EncounterStatus.CODED
-            message = "Stub: coding complete; mock result: coded."
-        else:
-            stage = RcmStage.CODING_CHARGE_CAPTURE
-            status = EncounterStatus.CODED
-            message = "Stub: routed to coding; mock result: coded."
+        stage = RcmStage.CODING_CHARGE_CAPTURE
+        status = EncounterStatus.CODED
+        message = "Stub: mock result: coded."
 
     return EncounterOutput(
         encounter_id=encounter.encounter_id,
@@ -75,4 +48,6 @@ def _default_status_for_stage(stage: RcmStage) -> tuple[EncounterStatus, str]:
         return EncounterStatus.NEEDS_REVIEW, "Stub: denial/appeal; mock result: needs review."
     if stage == RcmStage.CLAIMS_SUBMISSION:
         return EncounterStatus.CLAIM_SUBMITTED, "Stub: claims submission; mock result: submitted."
+    if stage == RcmStage.INTAKE:
+        return EncounterStatus.NEEDS_REVIEW, "Stub: intake; mock result: needs review."
     return EncounterStatus.NEEDS_REVIEW, f"Stub: stage {stage.value}; mock result: needs review."

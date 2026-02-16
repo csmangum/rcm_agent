@@ -3,7 +3,7 @@
 import re
 import uuid
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable
 
 from rcm_agent.models import Encounter
 
@@ -38,6 +38,11 @@ _MOCK_POLICY_SNIPPETS: dict[tuple[str, str], list[str]] = {
 _MOCK_AUTH_STORE: dict[str, dict[str, Any]] = {}
 
 
+def _reset_auth_store() -> None:
+    """Clear the mock auth store (for tests)."""
+    _MOCK_AUTH_STORE.clear()
+
+
 def extract_clinical_indicators(clinical_notes: str) -> dict[str, Any]:
     """
     Keyword/regex extraction of diagnoses, symptoms, failed treatments, medical necessity indicators.
@@ -55,11 +60,17 @@ def extract_clinical_indicators(clinical_notes: str) -> dict[str, Any]:
     }
 
 
-def search_payer_policies(payer: str, procedure_code: str) -> list[str]:
+def search_payer_policies(
+    payer: str,
+    procedure_code: str,
+    backend: str | Callable[[str, str], list[str]] = "mock",
+) -> list[str]:
     """
-    Stub: return canned policy snippets keyed by (payer, procedure_code).
-    Real RAG in Phase 4.
+    Return policy snippets for (payer, procedure_code). Default backend is mock (canned snippets).
+    Phase 4 can inject a RAG backend by passing a callable(payer, procedure_code) -> list[str].
     """
+    if callable(backend):
+        return backend(payer, procedure_code)
     key = (payer.strip(), procedure_code.strip())
     return _MOCK_POLICY_SNIPPETS.get(key, ["No specific policy snippet on file; submit per plan requirements."])
 

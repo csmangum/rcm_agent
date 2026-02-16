@@ -10,6 +10,7 @@ from rcm_agent.tools.prior_auth import (
     search_payer_policies,
     submit_auth_request,
 )
+from rcm_agent.utils import save_artifact
 
 
 def run_prior_auth_crew(encounter: Encounter) -> EncounterOutput:
@@ -41,7 +42,9 @@ def run_prior_auth_crew(encounter: Encounter) -> EncounterOutput:
         encounter_status = EncounterStatus.AUTH_REQUIRED
 
     artifact_json = json.dumps(auth_packet, indent=2)
-    artifacts = [f"prior_auth_request_{encounter.encounter_id}.json"]
+    artifact_filename = f"prior_auth_request_{encounter.encounter_id}.json"
+    save_artifact(encounter.encounter_id, artifact_filename, artifact_json)
+    artifacts = [artifact_filename]
 
     return EncounterOutput(
         encounter_id=encounter.encounter_id,

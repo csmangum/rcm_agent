@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from rcm_agent.crews.main_crew import process_encounter
+from rcm_agent.crews.main_crew import dispatch_to_crew, estimate_charges, process_encounter
 from rcm_agent.crews.router import classify_encounter, route_encounter
 from rcm_agent.models import Encounter, RcmStage
 
@@ -100,3 +100,68 @@ def test_process_encounter_enc_002_prior_auth(examples_dir: Path) -> None:
     output = process_encounter(encounter)
     assert output.stage == RcmStage.PRIOR_AUTHORIZATION
     assert output.raw_result.get("router_stage") == "PRIOR_AUTHORIZATION"
+
+
+def test_process_encounter_enc_004_denial_stub(examples_dir: Path) -> None:
+    """Process ENC-004: router -> DENIAL_APPEAL -> stub crew returns NEEDS_REVIEW."""
+    encounter = _load_encounter(examples_dir, "encounter_004_denial_scenario.json")
+    output = process_encounter(encounter)
+    assert output.encounter_id == "ENC-004"
+    assert output.stage == RcmStage.DENIAL_APPEAL
+    assert output.status.value == "NEEDS_REVIEW"
+    assert output.raw_result.get("stub") is True
+
+
+def test_dispatch_to_crew_eligibility(encounter_005: Encounter) -> None:
+    """dispatch_to_crew with ELIGIBILITY_VERIFICATION runs eligibility crew."""
+    output = dispatch_to_crew(encounter_005, RcmStage.ELIGIBILITY_VERIFICATION)
+    assert output.stage == RcmStage.ELIGIBILITY_VERIFICATION
+    assert output.encounter_id == encounter_005.encounter_id
+
+
+def test_dispatch_to_crew_prior_auth(encounter_002: Encounter) -> None:
+    """dispatch_to_crew with PRIOR_AUTHORIZATION runs prior auth crew."""
+    output = dispatch_to_crew(encounter_002, RcmStage.PRIOR_AUTHORIZATION)
+    assert output.stage == RcmStage.PRIOR_AUTHORIZATION
+    assert "auth_id" in output.raw_result
+
+
+def test_dispatch_to_crew_coding(encounter_001: Encounter) -> None:
+    """dispatch_to_crew with CODING_CHARGE_CAPTURE runs coding crew."""
+    output = dispatch_to_crew(encounter_001, RcmStage.CODING_CHARGE_CAPTURE)
+    assert output.stage == RcmStage.CODING_CHARGE_CAPTURE
+    assert "suggested_codes" in output.raw_result
+
+
+def test_dispatch_to_crew_claims_submission_stub(encounter_001: Encounter) -> None:
+    """dispatch_to_crew with CLAIMS_SUBMISSION uses stub."""
+    output = dispatch_to_crew(encounter_001, RcmStage.CLAIMS_SUBMISSION)
+    assert output.stage == RcmStage.CLAIMS_SUBMISSION
+    assert output.raw_result.get("stub") is True
+
+
+def test_dispatch_to_crew_denial_appeal_stub(encounter_004: Encounter) -> None:
+    """dispatch_to_crew with DENIAL_APPEAL uses stub."""
+    output = dispatch_to_crew(encounter_004, RcmStage.DENIAL_APPEAL)
+    assert output.stage == RcmStage.DENIAL_APPEAL
+    assert output.raw_result.get("stub") is True
+
+
+def test_estimate_charges_known_cpt(encounter_002: Encounter) -> None:
+    """estimate_charges returns known amount for 73721 (MRI knee)."""
+    total = estimate_charges(encounter_002)
+    assert total == 800.0
+
+
+def test_estimate_charges_unknown_cpt(examples_dir: Path) -> None:
+    """estimate_charges uses default for CPT not in map."""
+    encounter = _load_encounter(examples_dir, "encounter_001_routine_visit.json")
+    total = estimate_charges(encounter)
+    assert total == 150.0  # 99213 is in map
+    # Encounter with unknown code would get _DEFAULT_ESTIMATE (500.0)
+    from rcm_agent.models import ProcedureCode
+    enc_unknown = encounter.model_copy(
+        update={"procedures": [ProcedureCode(code="99999", description="Unknown")]}
+    )
+    total_unknown = estimate_charges(enc_unknown)
+    assert total_unknown == 500.0

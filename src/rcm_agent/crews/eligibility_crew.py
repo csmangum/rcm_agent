@@ -50,18 +50,24 @@ def run_eligibility_crew(encounter: Encounter) -> EncounterOutput:
     raw_result["coverage_gaps"] = gaps
 
     recommendation = "proceed" if not gaps else "hold"
+    status = EncounterStatus.ELIGIBLE if not gaps else EncounterStatus.NEEDS_REVIEW
     artifacts: list[str] = []
     if gaps:
         artifacts.append(f"coverage_gaps: {', '.join(gaps)}")
     if cob.get("has_secondary"):
         artifacts.append(cob.get("secondary_note") or "COB indicated")
 
+    message = (
+        "Eligibility verified; recommendation: proceed."
+        if not gaps
+        else f"Eligibility verified with coverage gaps; recommendation: hold. Human review recommended."
+    )
     return EncounterOutput(
         encounter_id=encounter.encounter_id,
         stage=RcmStage.ELIGIBILITY_VERIFICATION,
-        status=EncounterStatus.ELIGIBLE,
+        status=status,
         actions_taken=actions,
         artifacts=artifacts,
-        message=f"Eligibility verified; recommendation: {recommendation}.",
+        message=message,
         raw_result=raw_result,
     )
