@@ -26,8 +26,6 @@ def run_coding_crew(encounter: Encounter) -> EncounterOutput:
     )
     icd_codes = [c["code"] for c in suggestion.get("icd_codes", [])] or existing_icd
     cpt_codes = suggestion.get("cpt_codes") or existing_cpt
-    if not cpt_codes and existing_cpt:
-        cpt_codes = existing_cpt
 
     actions.append("validate_code_combinations")
     validation = validate_code_combinations(icd_codes, cpt_codes)

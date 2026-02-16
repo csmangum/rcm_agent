@@ -61,8 +61,8 @@ def suggest_codes(
     notes_lower = (clinical_notes or "").lower()
     suggested_icd: list[dict[str, Any]] = []
     suggested_cpt: list[str] = []
-    seen_icd: set[str] = set()
-    seen_cpt: set[str] = set()
+    seen_icd: set[str] = set(existing_codes.get("icd", []))
+    seen_cpt: set[str] = set(existing_codes.get("cpt", []))
 
     for term, code_tuples in _CLINICAL_TERM_TO_CODES.items():
         if term not in notes_lower:
@@ -169,7 +169,11 @@ def calculate_expected_reimbursement(cpt_codes: list[str], payer: str) -> dict[s
     per_code: list[dict[str, Any]] = []
     total = 0.0
     for code in cpt_codes:
-        amount = _FEE_SCHEDULE.get((code, payer)) or _FEE_SCHEDULE.get((code, "")) or _DEFAULT_FEE
+        amount = _FEE_SCHEDULE.get((code, payer))
+        if amount is None:
+            amount = _FEE_SCHEDULE.get((code, ""))
+        if amount is None:
+            amount = _DEFAULT_FEE
         per_code.append({"cpt_code": code, "expected_amount": amount})
         total += amount
     return {
