@@ -1,6 +1,9 @@
 """Main crew orchestration: route -> escalation gate -> crew dispatch."""
 
 from rcm_agent.config import get_auth_required_procedures
+from rcm_agent.crews.coding_crew import run_coding_crew
+from rcm_agent.crews.eligibility_crew import run_eligibility_crew
+from rcm_agent.crews.prior_auth_crew import run_prior_auth_crew
 from rcm_agent.crews.router import route_encounter
 from rcm_agent.crews.stub import run_stub_crew
 from rcm_agent.models import (
@@ -34,7 +37,13 @@ def estimate_charges(encounter: Encounter) -> float:
 
 
 def dispatch_to_crew(encounter: Encounter, stage: RcmStage) -> EncounterOutput:
-    """Dispatch to specialized crew; Phase 2 uses stub with router stage."""
+    """Dispatch to specialized crew by stage; stub for CLAIMS_SUBMISSION and DENIAL_APPEAL."""
+    if stage == RcmStage.ELIGIBILITY_VERIFICATION:
+        return run_eligibility_crew(encounter)
+    if stage == RcmStage.PRIOR_AUTHORIZATION:
+        return run_prior_auth_crew(encounter)
+    if stage == RcmStage.CODING_CHARGE_CAPTURE:
+        return run_coding_crew(encounter)
     return run_stub_crew(
         encounter,
         auth_required_cpt=get_auth_required_procedures(),
