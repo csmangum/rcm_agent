@@ -12,9 +12,13 @@ def _is_oncology_icd(code: str) -> bool:
     code = code.upper().strip()
     if not code or len(code) < 3:
         return False
-    # C00-C96: malignant neoplasms
-    if code[0] == "C" and code[1:3].isdigit():
-        return 0 <= int(code[1:3]) <= 96
+    # C00-C96: malignant neoplasms (including C7A/C7B neuroendocrine tumors)
+    if code[0] == "C":
+        if code[1:3].isdigit():
+            return 0 <= int(code[1:3]) <= 96
+        # Handle C7A and C7B (malignant neuroendocrine tumors)
+        if code[1:3] in ("7A", "7B"):
+            return True
     # D00-D09: in situ neoplasms
     if code[0] == "D" and code[1] == "0" and code[2] in "0123456789":
         return True
