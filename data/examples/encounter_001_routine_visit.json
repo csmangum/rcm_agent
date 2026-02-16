@@ -1,0 +1,15 @@
+{
+  "encounter_id": "ENC-001",
+  "patient": {"age": 45, "gender": "F", "zip": "10001"},
+  "insurance": {"payer": "Aetna", "member_id": "AET123456789", "plan_type": "PPO"},
+  "date": "2026-02-10",
+  "type": "office_visit",
+  "procedures": [
+    {"code": "99213", "description": "Office visit, established patient, low complexity"}
+  ],
+  "diagnoses": [
+    {"code": "J06.9", "description": "Acute upper respiratory infection, unspecified"}
+  ],
+  "clinical_notes": "Established patient presents with 3 days of rhinorrhea, mild sore throat, no fever. No red flags. Supportive care recommended.",
+  "documents": ["progress_note.txt"]
+}

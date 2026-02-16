@@ -1,0 +1,15 @@
+{
+  "encounter_id": "ENC-005",
+  "patient": {"age": 28, "gender": "F", "zip": "90210"},
+  "insurance": {"payer": "Anthem", "member_id": "ANT777888999", "plan_type": "EPO"},
+  "date": "2026-02-14",
+  "type": "emergency",
+  "procedures": [
+    {"code": "99285", "description": "Emergency department visit, high complexity"}
+  ],
+  "diagnoses": [
+    {"code": "R10.9", "description": "Unspecified abdominal pain"}
+  ],
+  "clinical_notes": "ED visit for abdominal pain. Workup negative. Patient stated insurance may have lapsed; card on file shows termination date 2026-01-31. Eligibility verification needed before claim submission.",
+  "documents": ["ed_note.txt", "labs.pdf"]
+}

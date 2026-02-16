@@ -1,0 +1,15 @@
+{
+  "encounter_id": "ENC-004",
+  "patient": {"age": 34, "gender": "M", "zip": "77001"},
+  "insurance": {"payer": "Cigna", "member_id": "CIG444333222", "plan_type": "HMO"},
+  "date": "2026-01-15",
+  "type": "outpatient_procedure",
+  "procedures": [
+    {"code": "29881", "description": "Arthroscopy, knee, surgical; with meniscectomy"}
+  ],
+  "diagnoses": [
+    {"code": "M23.211", "description": "Derangement of medial meniscus due to old tear, right knee"}
+  ],
+  "clinical_notes": "Claim previously submitted and denied (CO-4: procedure not covered; PR-96: prior auth not on file). Patient had auth on file per our records. Need appeal with clinical documentation.",
+  "documents": ["denial_letter.pdf", "prior_auth_approval.pdf", "operative_note.pdf"]
+}
