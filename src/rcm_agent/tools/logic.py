@@ -43,14 +43,14 @@ def check_escalation(
     reasons: list[str] = []
 
     # 1. Low confidence
-    if config.confidence_threshold and confidence is not None:
+    if confidence is not None:
         if confidence < config.confidence_threshold:
             reasons.append(
                 f"Confidence score {confidence:.2f} below threshold {config.confidence_threshold}"
             )
 
     # 2. High dollar value
-    if config.high_value_threshold and estimated_charges is not None:
+    if estimated_charges is not None:
         if estimated_charges > config.high_value_threshold:
             reasons.append(
                 f"Estimated charges ${estimated_charges:,.0f} exceed threshold ${config.high_value_threshold:,.0f}"

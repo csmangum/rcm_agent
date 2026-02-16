@@ -1,14 +1,12 @@
 """Stub crew dispatcher: returns mock EncounterOutput based on encounter data."""
 
+from rcm_agent.config.settings import DEFAULT_AUTH_REQUIRED_CPT
 from rcm_agent.models import (
     Encounter,
     EncounterOutput,
     EncounterStatus,
     RcmStage,
 )
-
-# CPT codes that typically require prior auth (subset; can be overridden by config later)
-DEFAULT_AUTH_REQUIRED_CPT = {"73721", "70450", "72148", "29881"}
 
 
 def run_stub_crew(
