@@ -35,7 +35,7 @@ def history(encounter_id: str) -> None:
 
 @main.command()
 def metrics() -> None:
-    """Show aggregate metrics (clean rate, escalation %%, turnaround)."""
+    """Show aggregate metrics (clean rate, escalation %, turnaround)."""
     click.echo("Not yet implemented: metrics")
 
 

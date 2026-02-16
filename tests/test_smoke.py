@@ -3,8 +3,6 @@
 import json
 from pathlib import Path
 
-import pytest
-
 
 def test_import_rcm_agent() -> None:
     """Package can be imported."""
