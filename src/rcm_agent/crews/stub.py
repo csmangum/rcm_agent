@@ -28,7 +28,11 @@ def run_stub_crew(
         stage = RcmStage.DENIAL_APPEAL
         status = EncounterStatus.NEEDS_REVIEW
         message = "Stub: routed to denial/appeal (mentioned in notes)."
-    elif "eligibility" in notes_lower or "lapsed" in notes_lower or "termination" in notes_lower:
+    elif "lapsed" in notes_lower or "termination" in notes_lower:
+        stage = RcmStage.ELIGIBILITY_VERIFICATION
+        status = EncounterStatus.NOT_ELIGIBLE
+        message = "Stub: routed to eligibility verification; mock result: not eligible (coverage lapsed/terminated)."
+    elif "eligibility" in notes_lower:
         stage = RcmStage.ELIGIBILITY_VERIFICATION
         status = EncounterStatus.ELIGIBLE
         message = "Stub: routed to eligibility verification; mock result: eligible."

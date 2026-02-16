@@ -62,7 +62,9 @@ class EncounterRepository:
         self._db_path = db_path
 
     def _conn(self) -> sqlite3.Connection:
-        return sqlite3.connect(self._db_path)
+        conn = sqlite3.connect(self._db_path)
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
 
     def save_encounter(
         self,
@@ -268,9 +270,9 @@ class EncounterRepository:
                     prior_auth_request.payer,
                     json.dumps(prior_auth_request.procedure_codes),
                     prior_auth_request.clinical_justification,
-                    prior_auth_request.status,
+                    prior_auth_request.status.value,
                     prior_auth_request.submitted_at,
-                    prior_auth_request.decision,
+                    prior_auth_request.decision.value if prior_auth_request.decision is not None else None,
                     prior_auth_request.decision_date,
                 ),
             )
@@ -282,7 +284,16 @@ class EncounterRepository:
         """Insert or replace claim submission."""
         total_charges = claim_submission.total_charges
         if isinstance(total_charges, str):
-            total_charges = float(total_charges) if total_charges else 0.0
+            if not total_charges:
+                total_charges = 0.0
+            else:
+                try:
+                    total_charges = float(total_charges)
+                except ValueError as exc:
+                    raise ValueError(
+                        f"Invalid total_charges value for claim "
+                        f"{claim_submission.claim_id}: {total_charges!r} is not numeric."
+                    ) from exc
         conn = self._conn()
         try:
             conn.execute(
@@ -309,7 +320,7 @@ class EncounterRepository:
                     json.dumps(claim_submission.icd_codes),
                     json.dumps(claim_submission.cpt_codes),
                     json.dumps(claim_submission.modifiers),
-                    claim_submission.status,
+                    claim_submission.status.value,
                     claim_submission.submitted_at,
                 ),
             )

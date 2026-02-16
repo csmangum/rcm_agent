@@ -36,12 +36,39 @@ class EncounterStatus(StrEnum):
 
 
 class EncounterType(StrEnum):
-    """Type of encounter."""
+    """Type of encounter. Values use snake_case to match common EMR/EDI conventions."""
 
     outpatient_procedure = "outpatient_procedure"
     inpatient = "inpatient"
     office_visit = "office_visit"
     emergency = "emergency"
+
+
+class PriorAuthStatus(StrEnum):
+    """Prior authorization request status."""
+
+    PENDING = "pending"
+    SUBMITTED = "submitted"
+    APPROVED = "approved"
+    DENIED = "denied"
+
+
+class PriorAuthDecision(StrEnum):
+    """Prior authorization decision outcome."""
+
+    APPROVED = "approved"
+    DENIED = "denied"
+    PENDING = "pending"
+
+
+class ClaimStatus(StrEnum):
+    """Claim submission status."""
+
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    ACCEPTED = "accepted"
+    DENIED = "denied"
+    PAID = "paid"
 
 
 class Patient(BaseModel):
@@ -108,9 +135,9 @@ class PriorAuthRequest(BaseModel):
     payer: str
     procedure_codes: list[str]
     clinical_justification: str
-    status: str
+    status: PriorAuthStatus
     submitted_at: str
-    decision: str | None = None
+    decision: PriorAuthDecision | None = None
     decision_date: str | None = None
 
 
@@ -124,7 +151,7 @@ class ClaimSubmission(BaseModel):
     icd_codes: list[str]
     cpt_codes: list[str]
     modifiers: list[str] = Field(default_factory=list)
-    status: str
+    status: ClaimStatus
     submitted_at: str
 
 

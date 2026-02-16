@@ -1,6 +1,7 @@
 """Domain models for encounters and RCM stages."""
 
 from rcm_agent.models.encounter import (
+    ClaimStatus,
     ClaimSubmission,
     DiagnosisCode,
     Encounter,
@@ -10,12 +11,15 @@ from rcm_agent.models.encounter import (
     EscalationOutput,
     Insurance,
     Patient,
+    PriorAuthDecision,
     PriorAuthRequest,
+    PriorAuthStatus,
     ProcedureCode,
     RcmStage,
 )
 
 __all__ = [
+    "ClaimStatus",
     "ClaimSubmission",
     "DiagnosisCode",
     "Encounter",
@@ -25,7 +29,9 @@ __all__ = [
     "EscalationOutput",
     "Insurance",
     "Patient",
+    "PriorAuthDecision",
     "PriorAuthRequest",
+    "PriorAuthStatus",
     "ProcedureCode",
     "RcmStage",
 ]

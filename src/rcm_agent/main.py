@@ -37,9 +37,16 @@ def _repo(ctx: click.Context) -> EncounterRepository:
 def process(ctx: click.Context, encounter_file: str) -> None:
     """Process an encounter from a JSON file."""
     path = Path(encounter_file)
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
-    encounter = Encounter.model_validate(data)
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        encounter = Encounter.model_validate(data)
+    except json.JSONDecodeError as e:
+        click.echo(f"Invalid JSON in {encounter_file}: {e}", err=True)
+        raise SystemExit(1)
+    except Exception as e:
+        click.echo(f"Invalid encounter data in {encounter_file}: {e}", err=True)
+        raise SystemExit(1)
     repo = _repo(ctx)
 
     # Save as PENDING, then PROCESSING

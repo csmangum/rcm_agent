@@ -126,6 +126,8 @@ def test_save_workflow_run(tmp_path: Path, sample_encounter: Encounter) -> None:
 
 def test_save_prior_auth(tmp_path: Path, sample_encounter: Encounter) -> None:
     """save_prior_auth persists prior auth request."""
+    from rcm_agent.models import PriorAuthDecision, PriorAuthStatus
+
     db_path = str(tmp_path / "test.db")
     repo = EncounterRepository(db_path)
     repo.save_encounter(sample_encounter, RcmStage.PRIOR_AUTHORIZATION, EncounterStatus.PENDING)
@@ -135,9 +137,9 @@ def test_save_prior_auth(tmp_path: Path, sample_encounter: Encounter) -> None:
         payer="Aetna",
         procedure_codes=["73721"],
         clinical_justification="Knee pain.",
-        status="approved",
+        status=PriorAuthStatus.APPROVED,
         submitted_at="2026-02-10T12:00:00Z",
-        decision="approved",
+        decision=PriorAuthDecision.APPROVED,
         decision_date="2026-02-12",
     )
     repo.save_prior_auth(auth)
@@ -152,6 +154,8 @@ def test_save_prior_auth(tmp_path: Path, sample_encounter: Encounter) -> None:
 
 def test_save_claim_submission(tmp_path: Path, sample_encounter: Encounter) -> None:
     """save_claim_submission persists claim."""
+    from rcm_agent.models import ClaimStatus
+
     db_path = str(tmp_path / "test.db")
     repo = EncounterRepository(db_path)
     repo.save_encounter(sample_encounter, RcmStage.CLAIMS_SUBMISSION, EncounterStatus.PENDING)
@@ -163,7 +167,7 @@ def test_save_claim_submission(tmp_path: Path, sample_encounter: Encounter) -> N
         icd_codes=["J06.9"],
         cpt_codes=["99213"],
         modifiers=[],
-        status="submitted",
+        status=ClaimStatus.SUBMITTED,
         submitted_at="2026-02-11T00:00:00Z",
     )
     repo.save_claim_submission(claim)
@@ -174,6 +178,80 @@ def test_save_claim_submission(tmp_path: Path, sample_encounter: Encounter) -> N
     assert row is not None
     assert row[1] == 100.0
     conn.close()
+
+
+@pytest.mark.parametrize(
+    "total_charges_input, expected_db_value",
+    [
+        ("100.0", 100.0),
+        ("", 0.0),
+    ],
+)
+def test_save_claim_submission_string_total_charges(
+    tmp_path: Path,
+    sample_encounter: Encounter,
+    total_charges_input: str,
+    expected_db_value: float,
+) -> None:
+    """save_claim_submission handles string total_charges (valid and empty)."""
+    from rcm_agent.models import ClaimStatus
+
+    db_path = str(tmp_path / "test.db")
+    repo = EncounterRepository(db_path)
+    repo.save_encounter(sample_encounter, RcmStage.CLAIMS_SUBMISSION, EncounterStatus.PENDING)
+    claim = ClaimSubmission(
+        claim_id=f"CLM-STR-{total_charges_input or 'empty'}",
+        encounter_id="ENC-DB-001",
+        payer="Aetna",
+        total_charges=total_charges_input,
+        icd_codes=["J06.9"],
+        cpt_codes=["99213"],
+        modifiers=[],
+        status=ClaimStatus.SUBMITTED,
+        submitted_at="2026-02-11T00:00:00Z",
+    )
+    repo.save_claim_submission(claim)
+    import sqlite3
+    conn = sqlite3.connect(db_path)
+    cur = conn.execute(
+        "SELECT claim_id, total_charges FROM claim_submissions WHERE claim_id = ?",
+        (claim.claim_id,),
+    )
+    row = cur.fetchone()
+    assert row is not None
+    assert row[1] == expected_db_value
+    conn.close()
+
+
+def test_save_claim_submission_invalid_total_charges_raises(
+    tmp_path: Path, sample_encounter: Encounter
+) -> None:
+    """save_claim_submission raises ValueError for non-numeric total_charges string."""
+    from rcm_agent.models import ClaimStatus
+
+    db_path = str(tmp_path / "test.db")
+    repo = EncounterRepository(db_path)
+    repo.save_encounter(sample_encounter, RcmStage.CLAIMS_SUBMISSION, EncounterStatus.PENDING)
+    claim = ClaimSubmission(
+        claim_id="CLM-BAD",
+        encounter_id="ENC-DB-001",
+        payer="Aetna",
+        total_charges="abc",
+        icd_codes=["J06.9"],
+        cpt_codes=["99213"],
+        modifiers=[],
+        status=ClaimStatus.SUBMITTED,
+        submitted_at="2026-02-11T00:00:00Z",
+    )
+    with pytest.raises(ValueError, match="is not numeric"):
+        repo.save_claim_submission(claim)
+
+
+def test_update_status_nonexistent_encounter_id(tmp_path: Path) -> None:
+    """update_status with non-existent encounter_id does nothing and does not raise."""
+    db_path = str(tmp_path / "test.db")
+    repo = EncounterRepository(db_path)
+    repo.update_status("NONEXISTENT", EncounterStatus.CODED, "noop")
 
 
 def test_get_metrics(tmp_path: Path, sample_encounter: Encounter) -> None:

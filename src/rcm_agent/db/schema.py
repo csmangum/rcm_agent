@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS encounters (
 );
 """
 
+INDEX_ENCOUNTERS_STATUS = "CREATE INDEX IF NOT EXISTS idx_encounters_status ON encounters(status);"
+INDEX_ENCOUNTERS_STAGE = "CREATE INDEX IF NOT EXISTS idx_encounters_stage ON encounters(stage);"
+
 ENCOUNTER_AUDIT_LOG_TABLE = """
 CREATE TABLE IF NOT EXISTS encounter_audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,6 +37,10 @@ CREATE TABLE IF NOT EXISTS encounter_audit_log (
 );
 """
 
+INDEX_AUDIT_LOG_ENCOUNTER_ID = (
+    "CREATE INDEX IF NOT EXISTS idx_audit_log_encounter_id ON encounter_audit_log(encounter_id);"
+)
+
 WORKFLOW_RUNS_TABLE = """
 CREATE TABLE IF NOT EXISTS workflow_runs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,6 +52,10 @@ CREATE TABLE IF NOT EXISTS workflow_runs (
     FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id)
 );
 """
+
+INDEX_WORKFLOW_RUNS_ENCOUNTER_ID = (
+    "CREATE INDEX IF NOT EXISTS idx_workflow_runs_encounter_id ON workflow_runs(encounter_id);"
+)
 
 PRIOR_AUTH_REQUESTS_TABLE = """
 CREATE TABLE IF NOT EXISTS prior_auth_requests (
@@ -61,6 +72,10 @@ CREATE TABLE IF NOT EXISTS prior_auth_requests (
 );
 """
 
+INDEX_PRIOR_AUTH_ENCOUNTER_ID = (
+    "CREATE INDEX IF NOT EXISTS idx_prior_auth_encounter_id ON prior_auth_requests(encounter_id);"
+)
+
 CLAIM_SUBMISSIONS_TABLE = """
 CREATE TABLE IF NOT EXISTS claim_submissions (
     claim_id TEXT PRIMARY KEY,
@@ -76,12 +91,22 @@ CREATE TABLE IF NOT EXISTS claim_submissions (
 );
 """
 
+INDEX_CLAIM_SUBMISSIONS_ENCOUNTER_ID = (
+    "CREATE INDEX IF NOT EXISTS idx_claim_submissions_encounter_id ON claim_submissions(encounter_id);"
+)
+
 ALL_TABLES = [
     ENCOUNTERS_TABLE,
+    INDEX_ENCOUNTERS_STATUS,
+    INDEX_ENCOUNTERS_STAGE,
     ENCOUNTER_AUDIT_LOG_TABLE,
+    INDEX_AUDIT_LOG_ENCOUNTER_ID,
     WORKFLOW_RUNS_TABLE,
+    INDEX_WORKFLOW_RUNS_ENCOUNTER_ID,
     PRIOR_AUTH_REQUESTS_TABLE,
+    INDEX_PRIOR_AUTH_ENCOUNTER_ID,
     CLAIM_SUBMISSIONS_TABLE,
+    INDEX_CLAIM_SUBMISSIONS_ENCOUNTER_ID,
 ]
 
 
@@ -90,6 +115,7 @@ def init_db(db_path: str) -> None:
     path = Path(db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(db_path)
+    conn.execute("PRAGMA foreign_keys = ON")
     try:
         for ddl in ALL_TABLES:
             conn.execute(ddl)

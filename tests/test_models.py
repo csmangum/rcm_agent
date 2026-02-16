@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from rcm_agent.models import (
+    ClaimStatus,
     ClaimSubmission,
     DiagnosisCode,
     Encounter,
@@ -15,7 +16,9 @@ from rcm_agent.models import (
     EscalationOutput,
     Insurance,
     Patient,
+    PriorAuthDecision,
     PriorAuthRequest,
+    PriorAuthStatus,
     ProcedureCode,
     RcmStage,
 )
@@ -51,6 +54,8 @@ def test_rcm_stage_enum_values() -> None:
     assert RcmStage.ELIGIBILITY_VERIFICATION.value == "ELIGIBILITY_VERIFICATION"
     assert RcmStage.PRIOR_AUTHORIZATION.value == "PRIOR_AUTHORIZATION"
     assert RcmStage.CODING_CHARGE_CAPTURE.value == "CODING_CHARGE_CAPTURE"
+    assert RcmStage.CLAIMS_SUBMISSION.value == "CLAIMS_SUBMISSION"
+    assert RcmStage.DENIAL_APPEAL.value == "DENIAL_APPEAL"
     assert RcmStage.HUMAN_ESCALATION.value == "HUMAN_ESCALATION"
 
 
@@ -88,13 +93,13 @@ def test_prior_auth_request_construction() -> None:
         payer="UHC",
         procedure_codes=["73721"],
         clinical_justification="Knee pain, failed PT.",
-        status="approved",
+        status=PriorAuthStatus.APPROVED,
         submitted_at="2026-02-10T12:00:00Z",
-        decision="approved",
+        decision=PriorAuthDecision.APPROVED,
         decision_date="2026-02-12",
     )
     assert req.auth_id == "AUTH-1"
-    assert req.decision == "approved"
+    assert req.decision == PriorAuthDecision.APPROVED
     again = PriorAuthRequest.model_validate(req.model_dump())
     assert again.auth_id == req.auth_id
 
@@ -109,7 +114,7 @@ def test_claim_submission_construction() -> None:
         icd_codes=["J06.9"],
         cpt_codes=["99213"],
         modifiers=[],
-        status="submitted",
+        status=ClaimStatus.SUBMITTED,
         submitted_at="2026-02-11T00:00:00Z",
     )
     assert claim.claim_id == "CLM-1"
