@@ -19,7 +19,7 @@ def tmp_db_path(tmp_path: Path) -> str:
 
 
 def test_process_command(cli_runner: CliRunner, examples_dir: Path, tmp_db_path: str) -> None:
-    """process loads JSON, validates, saves to DB, runs stub crew."""
+    """process loads JSON, validates, saves to DB, runs router pipeline."""
     encounter_file = examples_dir / "encounter_001_routine_visit.json"
     result = cli_runner.invoke(main, ["--db-path", tmp_db_path, "process", str(encounter_file)])
     assert result.exit_code == 0
@@ -52,7 +52,7 @@ def test_history_command(cli_runner: CliRunner, examples_dir: Path, tmp_db_path:
     cli_runner.invoke(main, ["--db-path", tmp_db_path, "process", str(encounter_file)])
     result = cli_runner.invoke(main, ["--db-path", tmp_db_path, "history", "ENC-001"])
     assert result.exit_code == 0
-    assert "process_started" in result.output or "stub_workflow_complete" in result.output
+    assert "process_started" in result.output or "workflow_complete" in result.output
 
 
 def test_history_command_not_found(cli_runner: CliRunner, tmp_db_path: str) -> None:

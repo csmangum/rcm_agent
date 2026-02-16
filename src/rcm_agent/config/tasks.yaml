@@ -1,0 +1,15 @@
+# CrewAI task definitions for RCM workflows
+
+classify_encounter_task:
+  description: |
+    Given a hospital encounter (patient, insurance, date, type, procedures, diagnoses, clinical notes, documents),
+    determine the correct RCM stage for this encounter.
+    Stages: ELIGIBILITY_VERIFICATION, PRIOR_AUTHORIZATION, CODING_CHARGE_CAPTURE, CLAIMS_SUBMISSION, DENIAL_APPEAL.
+    Consider: missing/expired insurance -> eligibility; procedure requires prior auth -> prior authorization;
+    missing/incomplete coding -> coding/charge capture; ready for submission -> claims submission;
+    denied claim needing appeal -> denial/appeal.
+  expected_output: |
+    A structured response with:
+    1. stage: one of ELIGIBILITY_VERIFICATION, PRIOR_AUTHORIZATION, CODING_CHARGE_CAPTURE, CLAIMS_SUBMISSION, DENIAL_APPEAL
+    2. reasoning: brief explanation of why this stage was chosen
+    3. confidence: a number between 0 and 1 indicating classification confidence

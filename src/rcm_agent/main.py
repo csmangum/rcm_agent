@@ -6,7 +6,7 @@ from pathlib import Path
 import click
 
 from rcm_agent import __version__
-from rcm_agent.crews.stub import run_stub_crew
+from rcm_agent.crews.main_crew import process_encounter
 from rcm_agent.db import EncounterRepository
 from rcm_agent.models import Encounter, EncounterStatus, RcmStage
 
@@ -55,22 +55,27 @@ def process(ctx: click.Context, encounter_file: str) -> None:
         encounter.encounter_id,
         EncounterStatus.PROCESSING,
         "process_started",
-        details="Stub pipeline started",
+        details="Router and pipeline started",
     )
 
-    # Stub crew returns mock output
-    output = run_stub_crew(encounter)
+    output = process_encounter(encounter)
     repo.update_status(
         encounter.encounter_id,
         output.status,
-        "stub_workflow_complete",
+        "workflow_complete",
         new_stage=output.stage,
         details=output.message,
     )
+    router_output = {
+        "stage": output.stage.value,
+        "confidence": output.raw_result.get("router_confidence"),
+        "reasoning": output.raw_result.get("router_reasoning") or "",
+        "escalation_reasons": output.raw_result.get("escalation_reasons"),
+    }
     repo.save_workflow_run(
         encounter.encounter_id,
         output.stage,
-        {"stub": True},
+        router_output,
         output.model_dump(),
     )
 
