@@ -151,7 +151,6 @@ class EncounterRepository:
             )
             row = cur.fetchone()
             if not row:
-                conn.close()
                 return
             current_status, current_stage = row
 
