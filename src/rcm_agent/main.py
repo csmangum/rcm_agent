@@ -69,7 +69,7 @@ def process(ctx: click.Context, encounter_file: str) -> None:
     router_output = {
         "stage": output.stage.value,
         "confidence": output.raw_result.get("router_confidence"),
-        "reasoning": output.raw_result.get("router_reasoning"),
+        "reasoning": output.raw_result.get("router_reasoning") or "",
         "escalation_reasons": output.raw_result.get("escalation_reasons"),
     }
     repo.save_workflow_run(

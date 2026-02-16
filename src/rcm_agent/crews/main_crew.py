@@ -1,7 +1,7 @@
 """Main crew orchestration: route -> escalation gate -> crew dispatch."""
 
 from rcm_agent.config import get_auth_required_procedures
-from rcm_agent.crews.router import route_encounter, RouterResult
+from rcm_agent.crews.router import route_encounter
 from rcm_agent.crews.stub import run_stub_crew
 from rcm_agent.models import (
     Encounter,
@@ -66,6 +66,7 @@ def process_encounter(encounter: Encounter) -> EncounterOutput:
                 "escalation_reasons": escalation.reasons,
                 "router_stage": router_result.stage.value,
                 "router_confidence": router_result.confidence,
+                "router_reasoning": router_result.reasoning,
             },
         )
 

@@ -88,7 +88,10 @@ def test_process_encounter_enc_003_high_value_escalation(
     assert output.stage == RcmStage.HUMAN_ESCALATION
     assert output.status.value == "NEEDS_REVIEW"
     assert "escalation_reasons" in output.raw_result
-    assert any("charges" in r or "5000" in r for r in output.raw_result.get("escalation_reasons", []))
+    assert any(
+        "charges" in r.lower() and "5000" in r.replace(",", "")
+        for r in output.raw_result.get("escalation_reasons", [])
+    )
 
 
 def test_process_encounter_enc_002_prior_auth(examples_dir: Path) -> None:
