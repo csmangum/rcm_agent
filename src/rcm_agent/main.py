@@ -2,9 +2,11 @@
 
 import click
 
+from rcm_agent import __version__
+
 
 @click.group()
-@click.version_option(version="0.1.0", prog_name="rcm-agent")
+@click.version_option(version=__version__, prog_name="rcm-agent")
 def main() -> None:
     """Hospital RCM Agent – process encounters through eligibility, prior auth, and coding workflows."""
     pass
