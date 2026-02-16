@@ -1,0 +1,15 @@
+{
+  "encounter_id": "ENC-002",
+  "patient": {"age": 58, "gender": "M", "zip": "850xx"},
+  "insurance": {"payer": "UnitedHealthcare", "member_id": "UHC987654321", "plan_type": "PPO"},
+  "date": "2026-02-10",
+  "type": "outpatient_procedure",
+  "procedures": [
+    {"code": "73721", "description": "MRI knee without contrast"}
+  ],
+  "diagnoses": [
+    {"code": "M25.561", "description": "Pain in right knee"}
+  ],
+  "clinical_notes": "Patient with chronic right knee pain, failed conservative therapy including PT and NSAIDs. MRI ordered to evaluate for meniscal tear.",
+  "documents": ["clinic_note.txt", "physician_order.pdf"]
+}

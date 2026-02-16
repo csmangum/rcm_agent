@@ -1,0 +1,17 @@
+{
+  "encounter_id": "ENC-003",
+  "patient": {"age": 72, "gender": "F", "zip": "60601"},
+  "insurance": {"payer": "Blue Cross Blue Shield", "member_id": "BCBS555111222", "plan_type": "Medicare Advantage"},
+  "date": "2026-02-12",
+  "type": "inpatient",
+  "procedures": [
+    {"code": "27130", "description": "Total hip arthroplasty"},
+    {"code": "99223", "description": "Initial hospital care, high complexity"}
+  ],
+  "diagnoses": [
+    {"code": "M16.11", "description": "Unilateral primary osteoarthritis, right hip"},
+    {"code": "Z96.641", "description": "Presence of right artificial hip joint"}
+  ],
+  "clinical_notes": "Elective total hip replacement for end-stage osteoarthritis. Uncomplicated procedure. Post-op day 1, mobilizing with PT.",
+  "documents": ["operative_report.pdf", "h_and_p.pdf", "discharge_summary.pdf"]
+}
