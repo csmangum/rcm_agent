@@ -30,7 +30,7 @@ def run_coding_crew(encounter: Encounter) -> EncounterOutput:
     raw_icd = suggestion.get("icd_codes") or []
     raw_cpt = suggestion.get("cpt_codes") or []
     icd_codes = [c["code"] for c in raw_icd if isinstance(c, dict) and "code" in c] or existing_icd
-    cpt_codes = [c["code"] for c in raw_cpt if isinstance(c, dict) and "code" in c] if raw_cpt else existing_cpt
+    cpt_codes = [c["code"] for c in raw_cpt if isinstance(c, dict) and "code" in c] or existing_cpt
 
     actions.append("validate_code_combinations")
     validation = validate_code_combinations(icd_codes, cpt_codes)

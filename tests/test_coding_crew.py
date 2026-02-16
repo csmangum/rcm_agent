@@ -58,6 +58,7 @@ def test_coding_crew_enc_003_inpatient_surgery(encounter_003):
     output = run_coding_crew(encounter_003)
     assert output.encounter_id == "ENC-003"
     assert output.stage == RcmStage.CODING_CHARGE_CAPTURE
+    assert output.status == EncounterStatus.NEEDS_REVIEW  # missing_charge_flags (e.g. modifier 57)
     assert "suggest_codes" in output.actions_taken
     assert "validate_code_combinations" in output.actions_taken
     assert "27130" in str(output.raw_result.get("reimbursement", {}).get("per_code", []))

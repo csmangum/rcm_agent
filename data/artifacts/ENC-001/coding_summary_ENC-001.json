@@ -12,8 +12,14 @@
     "message": "Suggested 1 ICD code(s), 0 CPT code(s) for encounter type office_visit."
   },
   "validation": {
-    "valid": true,
-    "invalid_pairs": [],
+    "valid": false,
+    "invalid_pairs": [
+      {
+        "cpt_1": "99213",
+        "cpt_2": "99214",
+        "reason": "NCCI bundle"
+      }
+    ],
     "modifier_suggestions": []
   },
   "missing_charges": {
