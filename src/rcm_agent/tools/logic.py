@@ -8,15 +8,15 @@ _ONCOLOGY_KEYWORDS = ("oncology", "cancer", "tumor", "malignant", "carcinoma", "
 
 
 def _is_oncology_icd(code: str) -> bool:
-    """True if ICD-10 code is in oncology range C00-C96 or D00-D09."""
+    """True if ICD-10-CM code is in oncology range C00-C96 (malignant) or D00-D09 (in situ)."""
     code = code.upper().strip()
-    if not code:
+    if not code or len(code) < 3:
         return False
     # C00-C96: malignant neoplasms
-    if code.startswith("C"):
-        return True
+    if code[0] == "C" and code[1:3].isdigit():
+        return 0 <= int(code[1:3]) <= 96
     # D00-D09: in situ neoplasms
-    if code.startswith("D0"):
+    if code[0] == "D" and code[1] == "0" and code[2] in "0123456789":
         return True
     return False
 

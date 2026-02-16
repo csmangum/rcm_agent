@@ -282,18 +282,6 @@ class EncounterRepository:
 
     def save_claim_submission(self, claim_submission: ClaimSubmission) -> None:
         """Insert or replace claim submission."""
-        total_charges = claim_submission.total_charges
-        if isinstance(total_charges, str):
-            if not total_charges:
-                total_charges = 0.0
-            else:
-                try:
-                    total_charges = float(total_charges)
-                except ValueError as exc:
-                    raise ValueError(
-                        f"Invalid total_charges value for claim "
-                        f"{claim_submission.claim_id}: {total_charges!r} is not numeric."
-                    ) from exc
         conn = self._conn()
         try:
             conn.execute(
@@ -316,7 +304,7 @@ class EncounterRepository:
                     claim_submission.claim_id,
                     claim_submission.encounter_id,
                     claim_submission.payer,
-                    total_charges,
+                    claim_submission.total_charges,
                     json.dumps(claim_submission.icd_codes),
                     json.dumps(claim_submission.cpt_codes),
                     json.dumps(claim_submission.modifiers),

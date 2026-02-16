@@ -1,0 +1,34 @@
+{
+  "suggested_codes": {
+    "icd_codes": [],
+    "cpt_codes": [],
+    "confidence": 0.5,
+    "message": "No keyword match for encounter type office_visit; manual review recommended."
+  },
+  "validation": {
+    "valid": true,
+    "invalid_pairs": [],
+    "modifier_suggestions": []
+  },
+  "missing_charges": {
+    "missing_codes": [],
+    "missing_charge_flags": [],
+    "documented_procedures": [
+      "99213"
+    ],
+    "suggested_cpts": [
+      "99213"
+    ]
+  },
+  "reimbursement": {
+    "payer": "Aetna",
+    "per_code": [
+      {
+        "cpt_code": "99213",
+        "expected_amount": 150.0
+      }
+    ],
+    "total_expected": 150.0
+  },
+  "confidence": 0.5
+}

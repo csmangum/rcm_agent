@@ -1,6 +1,6 @@
 """Coding and charge capture tools: code suggestion, NCCI validation, missing charges, guidelines stub, fee schedule."""
 
-from typing import Any
+from typing import Any, Callable
 
 from rcm_agent.models import Encounter, EncounterType
 
@@ -60,7 +60,7 @@ def suggest_codes(
     existing_codes = existing_codes or {}
     notes_lower = (clinical_notes or "").lower()
     suggested_icd: list[dict[str, Any]] = []
-    suggested_cpt: list[str] = []
+    suggested_cpt: list[dict[str, Any]] = []
     seen_icd: set[str] = set(existing_codes.get("icd", []))
     seen_cpt: set[str] = set(existing_codes.get("cpt", []))
 
@@ -72,7 +72,7 @@ def suggest_codes(
                 suggested_icd.append({"code": icd, "description": desc, "confidence": 0.85})
                 seen_icd.add(icd)
             if cpt not in seen_cpt:
-                suggested_cpt.append(cpt)
+                suggested_cpt.append({"code": cpt, "description": desc, "confidence": 0.85})
                 seen_cpt.add(cpt)
 
     # If no hits, return empty with low confidence
@@ -88,7 +88,7 @@ def suggest_codes(
     encounter_str = encounter_type if isinstance(encounter_type, str) else getattr(encounter_type, "value", str(encounter_type))
     return {
         "icd_codes": suggested_icd,
-        "cpt_codes": list(suggested_cpt),
+        "cpt_codes": suggested_cpt,
         "confidence": 0.85 if (suggested_icd or suggested_cpt) else 0.5,
         "message": f"Suggested {len(suggested_icd)} ICD code(s), {len(suggested_cpt)} CPT code(s) for encounter type {encounter_str}.",
     }
@@ -122,12 +122,32 @@ def validate_code_combinations(
     }
 
 
-def identify_missing_charges(encounter: Encounter, suggested_codes: dict[str, Any]) -> dict[str, Any]:
+def _cpt_codes_to_set(cpt_codes: list[Any]) -> set[str]:
+    """Normalize cpt_codes (list of dicts with 'code' or list of str) to set of code strings."""
+    result: set[str] = set()
+    for c in cpt_codes:
+        if isinstance(c, dict) and "code" in c:
+            result.add(str(c["code"]))
+        elif isinstance(c, str):
+            result.add(c)
+    return result
+
+
+def identify_missing_charges(
+    encounter: Encounter,
+    suggested_codes: dict[str, Any],
+    effective_cpt_codes: list[str] | None = None,
+) -> dict[str, Any]:
     """
     Compare documented procedures to suggested/coded procedures; flag missing modifiers and missing codes.
+    When effective_cpt_codes is provided (e.g. from crew after merging suggestion with existing), use it
+    for suggested_cpts; otherwise derive from suggested_codes["cpt_codes"].
     """
     documented_cpts = {p.code for p in encounter.procedures}
-    suggested_cpts = set(suggested_codes.get("cpt_codes") or [])
+    if effective_cpt_codes is not None:
+        suggested_cpts = set(effective_cpt_codes)
+    else:
+        suggested_cpts = _cpt_codes_to_set(suggested_codes.get("cpt_codes") or [])
     missing_codes = documented_cpts - suggested_cpts
     extra_suggested = suggested_cpts - documented_cpts
 
@@ -153,10 +173,16 @@ def identify_missing_charges(encounter: Encounter, suggested_codes: dict[str, An
     }
 
 
-def search_coding_guidelines(query: str) -> list[str]:
+def search_coding_guidelines(
+    query: str,
+    backend: str | Callable[[str], list[str]] = "mock",
+) -> list[str]:
     """
-    Stub: return canned guideline snippets. Real RAG in Phase 4.
+    Return coding guideline snippets for query. Default backend is mock (canned snippets).
+    Phase 4 can inject a RAG backend by passing a callable(query) -> list[str].
     """
+    if callable(backend):
+        return backend(query)
     query_lower = query.lower()
     results: list[str] = []
     for key, snippets in _MOCK_GUIDELINES.items():

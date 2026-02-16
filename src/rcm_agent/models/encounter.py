@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 class RcmStage(StrEnum):
     """RCM workflow stage (replaces ClaimType)."""
 
+    INTAKE = "INTAKE"
     ELIGIBILITY_VERIFICATION = "ELIGIBILITY_VERIFICATION"
     PRIOR_AUTHORIZATION = "PRIOR_AUTHORIZATION"
     CODING_CHARGE_CAPTURE = "CODING_CHARGE_CAPTURE"
@@ -147,7 +148,7 @@ class ClaimSubmission(BaseModel):
     claim_id: str
     encounter_id: str
     payer: str
-    total_charges: str | float
+    total_charges: float
     icd_codes: list[str]
     cpt_codes: list[str]
     modifiers: list[str] = Field(default_factory=list)

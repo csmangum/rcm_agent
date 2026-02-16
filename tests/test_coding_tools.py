@@ -18,14 +18,19 @@ def test_suggest_codes_upper_respiratory():
     assert r["confidence"] >= 0.5
     assert "icd_codes" in r and "cpt_codes" in r
     assert len(r["icd_codes"]) >= 1 or len(r["cpt_codes"]) >= 1
+    # CPT codes are returned as dicts with code, description, confidence (same shape as ICD)
+    if r["cpt_codes"]:
+        assert isinstance(r["cpt_codes"][0], dict)
+        assert "code" in r["cpt_codes"][0] and "confidence" in r["cpt_codes"][0]
 
 
 def test_suggest_codes_knee_pain():
     notes = "Chronic right knee pain, MRI ordered for meniscal tear."
     r = suggest_codes(notes, "outpatient_procedure", None)
+    cpt_codes = [c["code"] for c in r["cpt_codes"]] if r["cpt_codes"] and isinstance(r["cpt_codes"][0], dict) else (r["cpt_codes"] or [])
     assert ("M25.561" in [c["code"] for c in r["icd_codes"]] or
-            "73721" in r["cpt_codes"] or
-            "29881" in r["cpt_codes"]) or (r["icd_codes"] or r["cpt_codes"])
+            "73721" in cpt_codes or
+            "29881" in cpt_codes) or (r["icd_codes"] or r["cpt_codes"])
 
 
 def test_suggest_codes_no_match():
