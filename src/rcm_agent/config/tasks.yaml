@@ -42,7 +42,7 @@ search_policy_task:
 
 assemble_auth_task:
   description: "Assemble prior auth packet from encounter, clinical indicators, and policy matches."
-  expected_output: "Structured auth packet (encounter_id, payer, procedure_codes, clinical_justification, policy_references)."
+  expected_output: "Structured auth packet (encounter_id, payer, procedure_codes, clinical_indicators, clinical_notes_excerpt, clinical_justification, policy_references)."
 
 submit_auth_task:
   description: "Submit prior auth request; return auth_id and submitted status."

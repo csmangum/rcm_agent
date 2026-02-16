@@ -15,7 +15,7 @@ from rcm_agent.tools.prior_auth import (
 def test_extract_clinical_indicators_knee_mri():
     notes = "Patient with chronic right knee pain, failed conservative therapy including PT and NSAIDs. MRI ordered to evaluate for meniscal tear."
     r = extract_clinical_indicators(notes)
-    assert "pain" in r["symptoms"] or "medical_necessity_indicators"
+    assert "pain" in r["symptoms"] or "pain" in r["medical_necessity_indicators"]
     assert "failed" in r["medical_necessity_indicators"]
     assert "summary" in r
 

@@ -77,18 +77,20 @@ def suggest_codes(
 
     # If no hits, return empty with low confidence
     if not suggested_icd and not suggested_cpt:
+        encounter_str = encounter_type if isinstance(encounter_type, str) else getattr(encounter_type, "value", str(encounter_type))
         return {
             "icd_codes": [],
             "cpt_codes": [],
             "confidence": 0.5,
-            "message": "No keyword match; manual review recommended.",
+            "message": f"No keyword match for encounter type {encounter_str}; manual review recommended.",
         }
 
+    encounter_str = encounter_type if isinstance(encounter_type, str) else getattr(encounter_type, "value", str(encounter_type))
     return {
         "icd_codes": suggested_icd,
         "cpt_codes": list(suggested_cpt),
         "confidence": 0.85 if (suggested_icd or suggested_cpt) else 0.5,
-        "message": f"Suggested {len(suggested_icd)} ICD code(s), {len(suggested_cpt)} CPT code(s).",
+        "message": f"Suggested {len(suggested_icd)} ICD code(s), {len(suggested_cpt)} CPT code(s) for encounter type {encounter_str}.",
     }
 
 
@@ -132,8 +134,11 @@ def identify_missing_charges(encounter: Encounter, suggested_codes: dict[str, An
     flags: list[str] = []
     if missing_codes:
         flags.append(f"Documented procedure(s) not in suggested set: {sorted(missing_codes)}")
-    if extra_suggested and not documented_cpts:
-        flags.append(f"Suggested codes with no documented procedure: {sorted(extra_suggested)}")
+    if extra_suggested:
+        if documented_cpts:
+            flags.append(f"Suggested code(s) not documented in encounter: {sorted(extra_suggested)}")
+        else:
+            flags.append(f"Suggested codes with no documented procedure: {sorted(extra_suggested)}")
 
     # Modifier check: 27130 + 99223 often needs 57
     cpt_list = list(documented_cpts) + list(suggested_cpts)

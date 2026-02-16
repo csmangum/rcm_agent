@@ -72,6 +72,9 @@ def assemble_auth_packet(
     """
     Assemble structured prior auth request: patient info, procedure, clinical justification, policy refs.
     """
+    notes_excerpt = (encounter.clinical_notes or "")[:500]
+    summary = clinical_indicators.get("summary", "")
+    clinical_justification = (summary + " " + notes_excerpt).strip() or "No clinical justification extracted."
     return {
         "encounter_id": encounter.encounter_id,
         "patient": encounter.patient.model_dump(),
@@ -82,8 +85,9 @@ def assemble_auth_packet(
         "procedure_descriptions": [p.description for p in encounter.procedures],
         "diagnoses": [d.code for d in encounter.diagnoses],
         "clinical_indicators": clinical_indicators,
+        "clinical_justification": clinical_justification,
         "policy_references": policy_matches,
-        "clinical_notes_excerpt": (encounter.clinical_notes or "")[:500],
+        "clinical_notes_excerpt": notes_excerpt,
     }
 
 
