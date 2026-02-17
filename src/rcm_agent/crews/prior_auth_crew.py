@@ -3,6 +3,7 @@
 import json
 
 from rcm_agent.models import Encounter, EncounterOutput, EncounterStatus, RcmStage
+from rcm_agent.rag import get_payer_policy_backend
 from rcm_agent.tools.prior_auth import (
     assemble_auth_packet,
     extract_clinical_indicators,
@@ -22,9 +23,12 @@ def run_prior_auth_crew(encounter: Encounter) -> EncounterOutput:
     clinical_indicators = extract_clinical_indicators(encounter.clinical_notes or "")
 
     policy_matches: dict[str, list[str]] = {}
+    policy_backend = get_payer_policy_backend()
     for p in encounter.procedures:
         actions.append("search_payer_policies")
-        policy_matches[p.code] = search_payer_policies(encounter.insurance.payer, p.code)
+        policy_matches[p.code] = search_payer_policies(
+            encounter.insurance.payer, p.code, backend=policy_backend or "mock"
+        )
 
     actions.append("assemble_auth_packet")
     auth_packet = assemble_auth_packet(encounter, clinical_indicators, policy_matches)

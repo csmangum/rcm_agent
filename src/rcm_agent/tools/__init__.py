@@ -4,6 +4,8 @@ from rcm_agent.tools.coding import (
     calculate_expected_reimbursement,
     identify_missing_charges,
     search_coding_guidelines,
+    search_cms_requirements,
+    search_ncci_edits,
     suggest_codes,
     validate_code_combinations,
 )
@@ -37,5 +39,7 @@ __all__ = [
     "validate_code_combinations",
     "identify_missing_charges",
     "search_coding_guidelines",
+    "search_ncci_edits",
+    "search_cms_requirements",
     "calculate_expected_reimbursement",
 ]

@@ -64,3 +64,22 @@ def test_coding_crew_enc_003_inpatient_surgery(encounter_003):
     assert "27130" in str(output.raw_result.get("reimbursement", {}).get("per_code", []))
     # May have modifier suggestion for 27130+99223
     assert "validation" in output.raw_result
+
+
+def test_coding_crew_includes_guidelines_snippets(encounter_001):
+    """Coding crew calls search_coding_guidelines and includes snippets in raw_result."""
+    output = run_coding_crew(encounter_001)
+    assert "search_coding_guidelines" in output.actions_taken
+    assert "coding_guidelines_snippets" in output.raw_result
+    assert isinstance(output.raw_result["coding_guidelines_snippets"], list)
+
+
+def test_coding_crew_uses_injected_guidelines_backend(encounter_001, monkeypatch):
+    """When get_coding_guidelines_backend returns a callable, crew uses it."""
+    custom_snippet = "Custom RAG coding guideline"
+    monkeypatch.setattr(
+        "rcm_agent.crews.coding_crew.get_coding_guidelines_backend",
+        lambda: lambda query: [custom_snippet],
+    )
+    output = run_coding_crew(encounter_001)
+    assert output.raw_result["coding_guidelines_snippets"] == [custom_snippet]

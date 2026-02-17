@@ -3,9 +3,11 @@
 import json
 
 from rcm_agent.models import Encounter, EncounterOutput, EncounterStatus, RcmStage
+from rcm_agent.rag import get_coding_guidelines_backend
 from rcm_agent.tools.coding import (
     calculate_expected_reimbursement,
     identify_missing_charges,
+    search_coding_guidelines,
     suggest_codes,
     validate_code_combinations,
 )
@@ -32,6 +34,13 @@ def run_coding_crew(encounter: Encounter) -> EncounterOutput:
     icd_codes = [c["code"] for c in raw_icd if isinstance(c, dict) and "code" in c] or existing_icd
     cpt_codes = [c["code"] for c in raw_cpt if isinstance(c, dict) and "code" in c] or existing_cpt
 
+    guidelines_backend = get_coding_guidelines_backend()
+    actions.append("search_coding_guidelines")
+    coding_guidelines_query = f"CPT ICD-10 coding guidelines {encounter.type.value}"
+    coding_guidelines_snippets = search_coding_guidelines(
+        coding_guidelines_query, backend=guidelines_backend or "mock"
+    )
+
     actions.append("validate_code_combinations")
     validation = validate_code_combinations(icd_codes, cpt_codes)
 
@@ -51,6 +60,7 @@ def run_coding_crew(encounter: Encounter) -> EncounterOutput:
     )
     raw_result = {
         "suggested_codes": suggestion,
+        "coding_guidelines_snippets": coding_guidelines_snippets,
         "validation": validation,
         "missing_charges": missing,
         "reimbursement": reimbursement,

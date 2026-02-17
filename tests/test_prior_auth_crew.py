@@ -37,3 +37,17 @@ def test_prior_auth_crew_no_procedures_completes():
     assert output.stage == RcmStage.PRIOR_AUTHORIZATION
     assert output.raw_result.get("auth_packet", {}).get("procedure_codes") == []
 
+
+def test_prior_auth_crew_uses_injected_policy_backend(encounter_002, monkeypatch):
+    """When get_payer_policy_backend returns a callable, crew uses it for policy snippets."""
+    custom_snippet = "Custom RAG policy snippet for 73721"
+    monkeypatch.setattr(
+        "rcm_agent.crews.prior_auth_crew.get_payer_policy_backend",
+        lambda: lambda payer, code: [custom_snippet],
+    )
+    output = run_prior_auth_crew(encounter_002)
+    assert output.stage == RcmStage.PRIOR_AUTHORIZATION
+    policy_refs = output.raw_result.get("auth_packet", {}).get("policy_references", {})
+    assert "73721" in policy_refs
+    assert policy_refs["73721"] == [custom_snippet]
+

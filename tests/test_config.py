@@ -7,6 +7,7 @@ from rcm_agent.config import (
     get_auth_required_procedures,
     get_escalation_config,
     get_payer_config,
+    get_rag_config,
 )
 
 
@@ -68,3 +69,30 @@ def test_get_payer_config_structure() -> None:
         assert isinstance(rules, dict)
         assert "auth_required_cpt_override" in rules
         assert "common_denial_codes" in rules
+
+
+def test_get_rag_config_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """get_rag_config returns mock backend and default chroma path when env unset."""
+    monkeypatch.delenv("RCM_RAG_BACKEND", raising=False)
+    monkeypatch.delenv("RCM_RAG_CHROMA_DIR", raising=False)
+    config = get_rag_config()
+    assert config["backend"] == "mock"
+    assert "chroma_dir" in config
+    assert config["chroma_dir"].name == "chroma"
+    assert "medicare_rag" in str(config["chroma_dir"])
+
+
+def test_get_rag_config_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """get_rag_config reads RCM_RAG_BACKEND and RCM_RAG_CHROMA_DIR."""
+    monkeypatch.setenv("RCM_RAG_BACKEND", "rag")
+    monkeypatch.setenv("RCM_RAG_CHROMA_DIR", "/custom/path/chroma")
+    config = get_rag_config()
+    assert config["backend"] == "rag"
+    assert str(config["chroma_dir"]) == "/custom/path/chroma"
+
+
+def test_get_rag_config_invalid_backend_falls_back_to_mock(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Invalid RCM_RAG_BACKEND falls back to mock."""
+    monkeypatch.setenv("RCM_RAG_BACKEND", "invalid")
+    config = get_rag_config()
+    assert config["backend"] == "mock"
