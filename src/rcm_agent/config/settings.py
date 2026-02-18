@@ -1,6 +1,7 @@
 """RCM-specific settings loaded from environment."""
 
 import os
+from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
@@ -52,6 +53,17 @@ def get_auth_required_procedures() -> set[str]:
     if not raw or not raw.strip():
         return set(DEFAULT_AUTH_REQUIRED_CPT)
     return {code.strip() for code in raw.split(",") if code.strip()}
+
+
+def get_rag_config() -> dict[str, Any]:
+    """RAG backend selection and ChromaDB path. Backend: 'mock' or 'rag'."""
+    default_chroma = Path.home() / "medicare_rag" / "data" / "chroma"
+    raw = os.environ.get("RCM_RAG_CHROMA_DIR", "").strip()
+    chroma_dir = Path(raw).expanduser() if raw else default_chroma
+    backend = (os.environ.get("RCM_RAG_BACKEND") or "mock").strip().lower()
+    if backend not in ("mock", "rag"):
+        backend = "mock"
+    return {"backend": backend, "chroma_dir": chroma_dir}
 
 
 def get_payer_config() -> dict[str, dict[str, Any]]:

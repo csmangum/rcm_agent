@@ -7,6 +7,8 @@ from rcm_agent.tools.coding import (
     calculate_expected_reimbursement,
     identify_missing_charges,
     search_coding_guidelines,
+    search_cms_requirements,
+    search_ncci_edits,
     suggest_codes,
     validate_code_combinations,
 )
@@ -98,3 +100,37 @@ def test_calculate_expected_reimbursement_unknown_payer():
     r = calculate_expected_reimbursement(["99213"], "UnknownPayer")
     assert r["total_expected"] >= 0
     assert r["per_code"][0]["expected_amount"] >= 0
+
+
+def test_search_ncci_edits_mock_known_pair():
+    r = search_ncci_edits("27130", "99223")
+    assert len(r) >= 1
+    assert "57" in r[0] or "modifier" in r[0].lower()
+
+
+def test_search_ncci_edits_mock_unknown_pair():
+    r = search_ncci_edits("99999", "88888")
+    assert len(r) >= 1
+    assert "NCCI" in r[0] or "refer" in r[0].lower()
+
+
+def test_search_ncci_edits_callable_backend():
+    r = search_ncci_edits("27130", "99223", backend=lambda c1, c2: [f"NCCI {c1}+{c2} custom"])
+    assert r == ["NCCI 27130+99223 custom"]
+
+
+def test_search_cms_requirements_mock_prior_auth():
+    r = search_cms_requirements("prior auth")
+    assert len(r) >= 1
+    assert "prior" in r[0].lower() or "CMS" in r[0]
+
+
+def test_search_cms_requirements_mock_unknown_topic():
+    r = search_cms_requirements("unknown topic xyz")
+    assert len(r) >= 1
+    assert "CMS" in r[0] or "refer" in r[0].lower()
+
+
+def test_search_cms_requirements_callable_backend():
+    r = search_cms_requirements("interop", backend=lambda t: [f"CMS {t} snippet"])
+    assert r == ["CMS interop snippet"]

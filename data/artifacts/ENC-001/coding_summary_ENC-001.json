@@ -11,15 +11,12 @@
     "confidence": 0.85,
     "message": "Suggested 1 ICD code(s), 0 CPT code(s) for encounter type office_visit."
   },
+  "coding_guidelines_snippets": [
+    "No guideline snippet on file; refer to current CPT/ICD-10 guidelines."
+  ],
   "validation": {
-    "valid": false,
-    "invalid_pairs": [
-      {
-        "cpt_1": "99213",
-        "cpt_2": "99214",
-        "reason": "NCCI bundle"
-      }
-    ],
+    "valid": true,
+    "invalid_pairs": [],
     "modifier_suggestions": []
   },
   "missing_charges": {

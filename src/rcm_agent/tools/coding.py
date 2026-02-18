@@ -47,6 +47,21 @@ _MOCK_GUIDELINES: dict[str, list[str]] = {
     "hip": ["Total hip arthroplasty 27130. Include implant and approach in documentation."],
 }
 
+# NCCI edit lookup: (cpt1, cpt2) -> snippet list for search_ncci_edits mock.
+_MOCK_NCCI_SNIPPETS: dict[tuple[str, str], list[str]] = {
+    ("99213", "99214"): ["NCCI: Cannot bill two E&M levels for same encounter without modifier; choose one or append modifier."],
+    ("73721", "73720"): ["NCCI: MRI with (73720) vs without (73721) contrast are mutually exclusive; do not bill both for same anatomic area."],
+    ("29881", "29880"): ["NCCI: Meniscectomy (29881) and debridement (29880) bundle; separate encounters or modifier if distinct."],
+    ("27130", "99223"): ["Modifier 57 may be required for same-day E&M (99223) with decision for major procedure (27130)."],
+}
+
+# CMS requirements by topic for search_cms_requirements mock.
+_MOCK_CMS_REQUIREMENTS: dict[str, list[str]] = {
+    "prior auth": ["CMS prior authorization requirements may apply to certain services; check MAC/LCD."],
+    "interoperability": ["CMS 2026 interoperability rules support prior auth APIs and electronic data exchange."],
+    "coverage": ["Coverage determined by LCD/NCD and contract; document medical necessity."],
+}
+
 
 def suggest_codes(
     clinical_notes: str,
@@ -191,6 +206,42 @@ def search_coding_guidelines(
     if not results:
         results = ["No guideline snippet on file; refer to current CPT/ICD-10 guidelines."]
     return results
+
+
+def search_ncci_edits(
+    cpt_code_1: str,
+    cpt_code_2: str,
+    backend: str | Callable[[str, str], list[str]] = "mock",
+) -> list[str]:
+    """
+    Return NCCI edit snippets for a CPT code pair. Default backend is mock (canned snippets).
+    RAG backend: callable(cpt_code_1, cpt_code_2) -> list[str].
+    """
+    if callable(backend):
+        return backend(cpt_code_1.strip(), cpt_code_2.strip())
+    key = (cpt_code_1.strip(), cpt_code_2.strip())
+    key_rev = (key[1], key[0])
+    snippets = _MOCK_NCCI_SNIPPETS.get(key) or _MOCK_NCCI_SNIPPETS.get(key_rev)
+    if not snippets:
+        return ["No NCCI edit snippet on file for this code pair; refer to NCCI PTP edits."]
+    return snippets
+
+
+def search_cms_requirements(
+    topic: str,
+    backend: str | Callable[[str], list[str]] = "mock",
+) -> list[str]:
+    """
+    Return CMS regulation/requirement snippets for a topic. Default backend is mock (canned snippets).
+    RAG backend: callable(topic) -> list[str].
+    """
+    if callable(backend):
+        return backend(topic)
+    topic_lower = topic.lower().strip()
+    for key, snippets in _MOCK_CMS_REQUIREMENTS.items():
+        if key in topic_lower:
+            return snippets
+    return ["No CMS requirement snippet on file for this topic; refer to CMS manuals and MAC guidance."]
 
 
 def calculate_expected_reimbursement(cpt_codes: list[str], payer: str) -> dict[str, Any]:
