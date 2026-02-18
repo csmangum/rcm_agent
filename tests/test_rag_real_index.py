@@ -18,7 +18,7 @@ _DEFAULT_CHROMA = Path.home() / "medicare_rag" / "data" / "chroma"
 
 def _get_real_chroma_dir() -> Path | None:
     raw = os.environ.get("RCM_RAG_CHROMA_DIR", "").strip()
-    path = Path(raw) if raw else _DEFAULT_CHROMA
+    path = Path(raw).expanduser() if raw else _DEFAULT_CHROMA
     return path if path.exists() else None
 
 

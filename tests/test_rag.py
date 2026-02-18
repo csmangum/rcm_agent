@@ -30,7 +30,8 @@ def test_get_payer_policy_backend_returns_callable_when_rag(monkeypatch: pytest.
     # Call returns list (Chroma missing -> graceful message)
     result = backend("Aetna", "73721")
     assert isinstance(result, list)
-    assert len(result) >= 0 or "ChromaDB" in str(result) or "RAG" in str(result)
+    assert len(result) >= 1
+    assert "ChromaDB" in result[0] or "not found" in result[0].lower()
 
 
 def test_get_coding_guidelines_backend_returns_none_when_mock(monkeypatch: pytest.MonkeyPatch) -> None:

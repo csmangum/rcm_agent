@@ -59,7 +59,7 @@ def get_rag_config() -> dict[str, Any]:
     """RAG backend selection and ChromaDB path. Backend: 'mock' or 'rag'."""
     default_chroma = Path.home() / "medicare_rag" / "data" / "chroma"
     raw = os.environ.get("RCM_RAG_CHROMA_DIR", "").strip()
-    chroma_dir = Path(raw) if raw else default_chroma
+    chroma_dir = Path(raw).expanduser() if raw else default_chroma
     backend = (os.environ.get("RCM_RAG_BACKEND") or "mock").strip().lower()
     if backend not in ("mock", "rag"):
         backend = "mock"

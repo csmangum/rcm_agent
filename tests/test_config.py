@@ -1,5 +1,7 @@
 """Unit tests for config/settings."""
 
+from pathlib import Path
+
 import pytest
 
 from rcm_agent.config import (
@@ -89,6 +91,14 @@ def test_get_rag_config_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
     config = get_rag_config()
     assert config["backend"] == "rag"
     assert str(config["chroma_dir"]) == "/custom/path/chroma"
+
+
+def test_get_rag_config_expands_user_home(monkeypatch: pytest.MonkeyPatch) -> None:
+    """RCM_RAG_CHROMA_DIR with ~ expands to user home."""
+    monkeypatch.setenv("RCM_RAG_CHROMA_DIR", "~/medicare_rag/data/chroma")
+    config = get_rag_config()
+    expected = Path.home() / "medicare_rag" / "data" / "chroma"
+    assert config["chroma_dir"] == expected
 
 
 def test_get_rag_config_invalid_backend_falls_back_to_mock(monkeypatch: pytest.MonkeyPatch) -> None:

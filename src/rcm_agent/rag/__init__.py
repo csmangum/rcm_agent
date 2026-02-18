@@ -1,6 +1,7 @@
 """RAG infrastructure for payer policies and coding guidelines.
 
 Wires medicare_rag ChromaDB retriever into rcm_agent tools via callable backends.
+DATA_DIR is set for medicare_rag at each RAG call; once set it persists for the process.
 """
 
 import logging
@@ -11,19 +12,6 @@ from typing import Callable
 from rcm_agent.config import get_rag_config
 
 logger = logging.getLogger(__name__)
-
-# Set once so medicare_rag.config sees the correct DATA_DIR (parent of chroma)
-_rag_data_dir_set: str | None = None
-
-
-def _ensure_medicare_rag_chroma_dir(chroma_dir: Path) -> None:
-    """Set DATA_DIR so medicare_rag uses the given chroma directory. Idempotent per path."""
-    global _rag_data_dir_set
-    data_dir = str(chroma_dir.parent)
-    if _rag_data_dir_set == data_dir:
-        return
-    os.environ["DATA_DIR"] = data_dir
-    _rag_data_dir_set = data_dir
 
 
 def _rag_search_helper(query: str, metadata_filter: dict[str, str] | None = None) -> list[str]:
@@ -39,14 +27,25 @@ def _rag_search_helper(query: str, metadata_filter: dict[str, str] | None = None
         logger.warning("RAG chroma dir %s does not exist; returning empty snippets.", chroma_dir)
         return ["ChromaDB directory not found; run medicare_rag ingest first."]
     try:
-        _ensure_medicare_rag_chroma_dir(chroma_dir)
+        os.environ["DATA_DIR"] = str(chroma_dir.parent)
         from medicare_rag.query.retriever import get_retriever
 
         retriever = get_retriever(k=5, metadata_filter=metadata_filter) if metadata_filter else get_retriever(k=5)
         docs = retriever.invoke(query)
         return [d.page_content for d in docs] if docs else []
+    except OSError as e:
+        logger.warning(
+            "medicare_rag Chroma/data path or I/O error %s: %s; fallback to empty list.",
+            type(e).__name__,
+            e,
+        )
+        return []
     except Exception as e:
-        logger.warning("medicare_rag retrieval failed: %s; fallback to empty list.", e)
+        logger.warning(
+            "medicare_rag retrieval failed: %s: %s; fallback to empty list.",
+            type(e).__name__,
+            e,
+        )
         return []
 
 
