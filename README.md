@@ -29,9 +29,11 @@ cp .env.example .env
 ```bash
 rcm-agent --help
 rcm-agent process data/examples/encounter_001_routine_visit.json
+rcm-agent process data/examples/encounter_004_denial_scenario.json   # denial/appeal crew
 rcm-agent status ENC-001
 rcm-agent history ENC-001
 rcm-agent metrics
+rcm-agent denial-stats   # denial analytics (reason codes, type, payer)
 ```
 
 ## Tests

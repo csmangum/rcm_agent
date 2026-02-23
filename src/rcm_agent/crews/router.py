@@ -31,7 +31,13 @@ def classify_encounter(encounter: Encounter) -> RouterResult:
     procedure_codes = {p.code for p in encounter.procedures}
     auth_cpt = get_auth_required_procedures()
 
-    # DENIAL_APPEAL: notes mention denial or appeal
+    # DENIAL_APPEAL: structured denial_info present or notes mention denial/appeal
+    if encounter.denial_info is not None:
+        return RouterResult(
+            stage=RcmStage.DENIAL_APPEAL,
+            confidence=1.0,
+            reasoning="Structured denial_info present; route to denial/appeal.",
+        )
     if "denial" in notes_lower or "appeal" in notes_lower or "denied" in notes_lower:
         return RouterResult(
             stage=RcmStage.DENIAL_APPEAL,

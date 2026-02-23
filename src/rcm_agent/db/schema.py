@@ -95,6 +95,30 @@ INDEX_CLAIM_SUBMISSIONS_ENCOUNTER_ID = (
     "CREATE INDEX IF NOT EXISTS idx_claim_submissions_encounter_id ON claim_submissions(encounter_id);"
 )
 
+DENIAL_EVENTS_TABLE = """
+CREATE TABLE IF NOT EXISTS denial_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    encounter_id TEXT NOT NULL,
+    claim_id TEXT,
+    payer TEXT,
+    reason_codes TEXT NOT NULL,
+    denial_type TEXT NOT NULL,
+    appeal_viable INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (encounter_id) REFERENCES encounters(encounter_id)
+);
+"""
+
+INDEX_DENIAL_EVENTS_ENCOUNTER_ID = (
+    "CREATE INDEX IF NOT EXISTS idx_denial_events_encounter_id ON denial_events(encounter_id);"
+)
+INDEX_DENIAL_EVENTS_DENIAL_TYPE = (
+    "CREATE INDEX IF NOT EXISTS idx_denial_events_denial_type ON denial_events(denial_type);"
+)
+INDEX_DENIAL_EVENTS_PAYER = (
+    "CREATE INDEX IF NOT EXISTS idx_denial_events_payer ON denial_events(payer);"
+)
+
 ALL_TABLES = [
     ENCOUNTERS_TABLE,
     INDEX_ENCOUNTERS_STATUS,
@@ -107,6 +131,10 @@ ALL_TABLES = [
     INDEX_PRIOR_AUTH_ENCOUNTER_ID,
     CLAIM_SUBMISSIONS_TABLE,
     INDEX_CLAIM_SUBMISSIONS_ENCOUNTER_ID,
+    DENIAL_EVENTS_TABLE,
+    INDEX_DENIAL_EVENTS_ENCOUNTER_ID,
+    INDEX_DENIAL_EVENTS_DENIAL_TYPE,
+    INDEX_DENIAL_EVENTS_PAYER,
 ]
 
 

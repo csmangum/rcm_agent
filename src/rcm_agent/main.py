@@ -79,6 +79,16 @@ def process(ctx: click.Context, encounter_file: str) -> None:
         output.model_dump(),
     )
 
+    if output.stage == RcmStage.DENIAL_APPEAL and output.raw_result:
+        repo.save_denial_event(
+            encounter_id=encounter.encounter_id,
+            reason_codes=output.raw_result.get("reason_codes") or [],
+            denial_type=output.raw_result.get("denial_type") or "clinical",
+            appeal_viable=output.raw_result.get("appeal_viable", True),
+            claim_id=output.raw_result.get("claim_id"),
+            payer=encounter.insurance.payer,
+        )
+
     click.echo(f"Encounter {encounter.encounter_id}: stage={output.stage.value}, status={output.status.value}")
     click.echo(output.message)
 
@@ -132,6 +142,33 @@ def metrics(ctx: click.Context) -> None:
     click.echo("By stage:")
     for stage, count in sorted(m["by_stage"].items()):
         click.echo(f"  {stage}: {count}")
+    denial_stats = m.get("denial_stats", {})
+    if denial_stats and denial_stats.get("total", 0) > 0:
+        click.echo("Denial events:")
+        click.echo(f"  Total: {denial_stats['total']} (appeal viable: {denial_stats.get('appeal_viable_count', 0)})")
+        for code, count in sorted(denial_stats.get("by_reason_code", {}).items()):
+            click.echo(f"  Reason {code}: {count}")
+        for dtype, count in sorted(denial_stats.get("by_denial_type", {}).items()):
+            click.echo(f"  Type {dtype}: {count}")
+
+
+@main.command()
+@click.pass_context
+def denial_stats(ctx: click.Context) -> None:
+    """Show denial analytics (reason codes, denial type, payer)."""
+    repo = _repo(ctx)
+    stats = repo.get_denial_stats()
+    click.echo(f"Total denial events: {stats['total']}")
+    click.echo(f"Appeal viable: {stats['appeal_viable_count']}")
+    click.echo("By reason code:")
+    for code, count in sorted(stats["by_reason_code"].items()):
+        click.echo(f"  {code}: {count}")
+    click.echo("By denial type:")
+    for dtype, count in sorted(stats["by_denial_type"].items()):
+        click.echo(f"  {dtype}: {count}")
+    click.echo("By payer:")
+    for payer, count in sorted(stats["by_payer"].items()):
+        click.echo(f"  {payer}: {count}")
 
 
 if __name__ == "__main__":

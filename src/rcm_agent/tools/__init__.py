@@ -1,5 +1,10 @@
 """CrewAI tools for RCM workflows."""
 
+from rcm_agent.tools.appeal import (
+    assemble_appeal_packet,
+    generate_appeal_letter,
+    search_payer_policies_for_appeal,
+)
 from rcm_agent.tools.coding import (
     calculate_expected_reimbursement,
     identify_missing_charges,
@@ -15,6 +20,13 @@ from rcm_agent.tools.eligibility import (
     flag_coverage_gaps,
     verify_benefits,
 )
+from rcm_agent.tools.denial import (
+    DENIAL_REASON_CODE_CATALOG,
+    DenialType,
+    assess_appeal_viability,
+    classify_denial_type,
+    parse_denial_reason_codes,
+)
 from rcm_agent.tools.logic import check_escalation
 from rcm_agent.tools.prior_auth import (
     assemble_auth_packet,
@@ -25,7 +37,15 @@ from rcm_agent.tools.prior_auth import (
 )
 
 __all__ = [
+    "assemble_appeal_packet",
+    "assess_appeal_viability",
+    "classify_denial_type",
     "check_escalation",
+    "DENIAL_REASON_CODE_CATALOG",
+    "DenialType",
+    "generate_appeal_letter",
+    "parse_denial_reason_codes",
+    "search_payer_policies_for_appeal",
     "check_member_eligibility",
     "verify_benefits",
     "check_coordination_of_benefits",

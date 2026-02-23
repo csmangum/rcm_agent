@@ -3,6 +3,7 @@
 from rcm_agent.models.encounter import (
     ClaimStatus,
     ClaimSubmission,
+    DenialInfo,
     DiagnosisCode,
     Encounter,
     EncounterOutput,
@@ -21,6 +22,7 @@ from rcm_agent.models.encounter import (
 __all__ = [
     "ClaimStatus",
     "ClaimSubmission",
+    "DenialInfo",
     "DiagnosisCode",
     "Encounter",
     "EncounterOutput",

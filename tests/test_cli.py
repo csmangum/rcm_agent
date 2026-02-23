@@ -85,3 +85,26 @@ def test_help(cli_runner: CliRunner) -> None:
     assert "status" in result.output
     assert "history" in result.output
     assert "metrics" in result.output
+    assert "denial-stats" in result.output
+
+
+def test_process_encounter_004_denial_crew(cli_runner: CliRunner, examples_dir: Path, tmp_db_path: str) -> None:
+    """process encounter_004 runs denial/appeal crew and succeeds."""
+    encounter_file = examples_dir / "encounter_004_denial_scenario.json"
+    result = cli_runner.invoke(main, ["--db-path", tmp_db_path, "process", str(encounter_file)])
+    assert result.exit_code == 0
+    assert "ENC-004" in result.output
+    assert "DENIAL_APPEAL" in result.output
+
+
+def test_denial_stats_command(cli_runner: CliRunner, examples_dir: Path, tmp_db_path: str) -> None:
+    """denial-stats shows analytics after processing a denial encounter."""
+    result = cli_runner.invoke(main, ["--db-path", tmp_db_path, "denial-stats"])
+    assert result.exit_code == 0
+    assert "Total denial events:" in result.output
+    encounter_file = examples_dir / "encounter_004_denial_scenario.json"
+    cli_runner.invoke(main, ["--db-path", tmp_db_path, "process", str(encounter_file)])
+    result2 = cli_runner.invoke(main, ["--db-path", tmp_db_path, "denial-stats"])
+    assert result2.exit_code == 0
+    assert "1" in result2.output  # at least one event
+    assert "By reason code:" in result2.output or "By denial type:" in result2.output

@@ -47,6 +47,7 @@ def test_init_db_creates_tables(tmp_path: Path) -> None:
     assert "workflow_runs" in tables
     assert "prior_auth_requests" in tables
     assert "claim_submissions" in tables
+    assert "denial_events" in tables
 
 
 def test_save_and_get_encounter_round_trip(tmp_path: Path, sample_encounter: Encounter) -> None:
@@ -187,6 +188,52 @@ def test_update_status_nonexistent_encounter_id(tmp_path: Path) -> None:
     repo.update_status("NONEXISTENT", EncounterStatus.CODED, "noop")
 
 
+def test_save_denial_event(tmp_path: Path, sample_encounter: Encounter) -> None:
+    """save_denial_event persists a denial event."""
+    db_path = str(tmp_path / "test.db")
+    repo = EncounterRepository(db_path)
+    repo.save_encounter(sample_encounter, RcmStage.DENIAL_APPEAL, EncounterStatus.CLAIM_DENIED)
+    repo.save_denial_event(
+        encounter_id="ENC-DB-001",
+        reason_codes=["CO-4", "PR-96"],
+        denial_type="administrative",
+        appeal_viable=True,
+        claim_id="CLM-1",
+        payer="Aetna",
+    )
+    events = repo.get_denial_events("ENC-DB-001")
+    assert len(events) == 1
+    assert events[0]["reason_codes"] == ["CO-4", "PR-96"]
+    assert events[0]["denial_type"] == "administrative"
+    assert events[0]["appeal_viable"] is True
+    assert events[0]["claim_id"] == "CLM-1"
+    assert events[0]["payer"] == "Aetna"
+
+
+def test_get_denial_events_empty(tmp_path: Path) -> None:
+    """get_denial_events for encounter with no events returns empty list."""
+    db_path = str(tmp_path / "test.db")
+    repo = EncounterRepository(db_path)
+    assert repo.get_denial_events("ENC-NONE") == []
+
+
+def test_get_denial_stats(tmp_path: Path, sample_encounter: Encounter) -> None:
+    """get_denial_stats returns by_reason_code, by_denial_type, by_payer."""
+    db_path = str(tmp_path / "test.db")
+    repo = EncounterRepository(db_path)
+    repo.save_encounter(sample_encounter, RcmStage.DENIAL_APPEAL, EncounterStatus.CLAIM_DENIED)
+    repo.save_denial_event("ENC-DB-001", ["CO-4", "PR-96"], "administrative", True, payer="Aetna")
+    repo.save_denial_event("ENC-DB-001", ["CO-4"], "clinical", False, payer="Aetna")
+    stats = repo.get_denial_stats()
+    assert stats["total"] == 2
+    assert stats["appeal_viable_count"] == 1
+    assert stats["by_reason_code"]["CO-4"] == 2
+    assert stats["by_reason_code"]["PR-96"] == 1
+    assert stats["by_denial_type"]["administrative"] == 1
+    assert stats["by_denial_type"]["clinical"] == 1
+    assert stats["by_payer"]["Aetna"] == 2
+
+
 def test_get_metrics(tmp_path: Path, sample_encounter: Encounter) -> None:
     """get_metrics returns aggregate counts."""
     db_path = str(tmp_path / "test.db")
@@ -212,3 +259,5 @@ def test_get_metrics(tmp_path: Path, sample_encounter: Encounter) -> None:
     assert m["escalated_count"] == 1
     assert m["clean_rate_pct"] == 50.0
     assert m["escalation_pct"] == 50.0
+    assert "denial_stats" in m
+    assert m["denial_stats"]["total"] == 0

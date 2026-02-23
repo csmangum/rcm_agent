@@ -102,6 +102,14 @@ class DiagnosisCode(BaseModel):
     description: str
 
 
+class DenialInfo(BaseModel):
+    """Structured denial payload for denial/appeal workflow."""
+
+    claim_id: str | None = None
+    reason_codes: list[str] = Field(default_factory=list)
+    denial_date: str | None = None
+
+
 class Encounter(BaseModel):
     """Encounter input (replaces ClaimInput)."""
 
@@ -114,6 +122,7 @@ class Encounter(BaseModel):
     diagnoses: list[DiagnosisCode]
     clinical_notes: str
     documents: list[str]
+    denial_info: DenialInfo | None = None
 
 
 class EncounterOutput(BaseModel):
