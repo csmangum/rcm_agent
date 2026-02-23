@@ -5,7 +5,7 @@ Member ID: CIG444333222
 Encounter ID: ENC-004
 Date of Service: 2026-01-15
 
-DENIAL REASON CODES: CO-4, PR-96
+DENIAL REASON CODES: CO-4 (Procedure/product not covered by payer), PR-96 (Prior authorization not on file)
 CLASSIFICATION: administrative
 APPEAL VIABILITY: Viable
 Prior auth denial; viable for appeal with supporting documentation (auth on file, clinical notes).

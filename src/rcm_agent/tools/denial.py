@@ -45,6 +45,8 @@ def classify_denial_type(reason_codes: list[str]) -> str:
     """
     Classify denial into clinical (medical necessity/coverage), administrative (prior auth, timely filing), or technical (coding, duplicate).
     Rule-based; no LLM.
+
+    When multiple code types exist, precedence is: technical (CO-18, CO-97, CO-16), then administrative (PR-96, PR-1, CO-197, CO-29), then clinical. One classification is returned per encounter for analytics and messaging.
     """
     if not reason_codes:
         return DenialType.CLINICAL

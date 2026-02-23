@@ -326,7 +326,7 @@ class EncounterRepository:
         claim_id: str | None = None,
         payer: str | None = None,
     ) -> None:
-        """Insert a denial event for analytics."""
+        """Insert a denial event for analytics. Call only after the encounter has been saved; denial_events.encounter_id references encounters(encounter_id)."""
         conn = self._conn()
         try:
             conn.execute(

@@ -217,6 +217,18 @@ def test_get_denial_events_empty(tmp_path: Path) -> None:
     assert repo.get_denial_events("ENC-NONE") == []
 
 
+def test_get_denial_stats_empty(tmp_path: Path) -> None:
+    """get_denial_stats on fresh DB returns zero totals and empty dicts for breakdowns."""
+    db_path = str(tmp_path / "test.db")
+    repo = EncounterRepository(db_path)
+    stats = repo.get_denial_stats()
+    assert stats["total"] == 0
+    assert stats["appeal_viable_count"] == 0
+    assert stats["by_reason_code"] == {}
+    assert stats["by_denial_type"] == {}
+    assert stats["by_payer"] == {}
+
+
 def test_get_denial_stats(tmp_path: Path, sample_encounter: Encounter) -> None:
     """get_denial_stats returns by_reason_code, by_denial_type, by_payer."""
     db_path = str(tmp_path / "test.db")

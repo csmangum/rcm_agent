@@ -61,6 +61,12 @@ def test_classify_denial_type_clinical() -> None:
     assert classify_denial_type([]) == DenialType.CLINICAL
 
 
+def test_classify_denial_type_mixed_codes() -> None:
+    """When both clinical and technical codes present, technical takes precedence."""
+    assert classify_denial_type(["CO-4", "CO-18"]) == DenialType.TECHNICAL
+    assert classify_denial_type(["PR-96", "CO-18"]) == DenialType.TECHNICAL
+
+
 def test_assess_appeal_viability_prior_auth_viable(examples_dir: Path) -> None:
     """PR-96 with documents -> viable."""
     encounter = _load_encounter(examples_dir, "encounter_004_denial_scenario.json")

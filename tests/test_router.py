@@ -64,6 +64,21 @@ def test_router_denial_info_routes_to_denial_appeal(examples_dir: Path) -> None:
     assert "denial_info" in result.reasoning.lower()
 
 
+def test_router_denial_info_empty_reason_codes_routes_to_denial_appeal(examples_dir: Path) -> None:
+    """Encounter with denial_info and empty reason_codes (no denial keywords in notes) still routes to DENIAL_APPEAL."""
+    from rcm_agent.models import DenialInfo
+    encounter = _load_encounter(examples_dir, "encounter_001_routine_visit.json")
+    encounter = encounter.model_copy(
+        update={
+            "clinical_notes": "Routine visit, no denial or appeal mentioned.",
+            "denial_info": DenialInfo(claim_id="CLM-X", reason_codes=[], denial_date=None),
+        }
+    )
+    result = classify_encounter(encounter)
+    assert result.stage == RcmStage.DENIAL_APPEAL
+    assert "denial_info" in result.reasoning.lower()
+
+
 def test_router_enc_005_eligibility(examples_dir: Path) -> None:
     """ENC-005 (eligibility mismatch) -> ELIGIBILITY_VERIFICATION."""
     encounter = _load_encounter(examples_dir, "encounter_005_eligibility_mismatch.json")

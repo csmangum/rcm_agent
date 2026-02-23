@@ -102,6 +102,7 @@ def test_denial_stats_command(cli_runner: CliRunner, examples_dir: Path, tmp_db_
     result = cli_runner.invoke(main, ["--db-path", tmp_db_path, "denial-stats"])
     assert result.exit_code == 0
     assert "Total denial events:" in result.output
+    assert "Total denial events: 0" in result.output
     encounter_file = examples_dir / "encounter_004_denial_scenario.json"
     cli_runner.invoke(main, ["--db-path", tmp_db_path, "process", str(encounter_file)])
     result2 = cli_runner.invoke(main, ["--db-path", tmp_db_path, "denial-stats"])

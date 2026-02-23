@@ -4,6 +4,7 @@ from typing import Any, Callable
 
 from rcm_agent.models import Encounter
 from rcm_agent.rag import get_payer_policy_backend
+from rcm_agent.tools.denial import DENIAL_REASON_CODE_CATALOG
 from rcm_agent.tools.prior_auth import search_payer_policies
 
 
@@ -45,6 +46,14 @@ def generate_appeal_letter(
 
     policy_ref = "\n".join(f"  - {s[:200]}..." if len(s) > 200 else f"  - {s}" for s in policy_snippets[:5]) if policy_snippets else "  (No policy snippets retrieved.)"
 
+    reason_codes_display = (
+        ", ".join(
+            f"{c} ({DENIAL_REASON_CODE_CATALOG[c]})" if c in DENIAL_REASON_CODE_CATALOG else c
+            for c in reason_codes
+        )
+        or "Not specified"
+    )
+
     letter = f"""
 APPEAL LETTER – Claim Denial
 
@@ -53,7 +62,7 @@ Member ID: {member_id}
 Encounter ID: {encounter.encounter_id}
 Date of Service: {encounter.date}
 
-DENIAL REASON CODES: {", ".join(reason_codes) or "Not specified"}
+DENIAL REASON CODES: {reason_codes_display}
 CLASSIFICATION: {denial_type}
 APPEAL VIABILITY: {"Viable" if appeal_viable else "Not recommended"}
 {viability_summary}
@@ -64,7 +73,7 @@ Descriptions: {", ".join(proc_descs)}
 Diagnosis codes: {", ".join(diag_codes)}
 
 CLINICAL JUSTIFICATION:
-{ (encounter.clinical_notes or "No clinical notes provided.")[:800] }
+{(encounter.clinical_notes or "No clinical notes provided.")[:800]}
 
 POLICY / COVERAGE REFERENCES:
 {policy_ref}

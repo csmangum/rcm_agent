@@ -84,7 +84,7 @@ def process(ctx: click.Context, encounter_file: str) -> None:
             encounter_id=encounter.encounter_id,
             reason_codes=output.raw_result.get("reason_codes") or [],
             denial_type=output.raw_result.get("denial_type") or "clinical",
-            appeal_viable=output.raw_result.get("appeal_viable", True),
+            appeal_viable=output.raw_result.get("appeal_viable", False),
             claim_id=output.raw_result.get("claim_id"),
             payer=encounter.insurance.payer,
         )
@@ -161,13 +161,13 @@ def denial_stats(ctx: click.Context) -> None:
     click.echo(f"Total denial events: {stats['total']}")
     click.echo(f"Appeal viable: {stats['appeal_viable_count']}")
     click.echo("By reason code:")
-    for code, count in sorted(stats["by_reason_code"].items()):
+    for code, count in sorted(stats.get("by_reason_code", {}).items()):
         click.echo(f"  {code}: {count}")
     click.echo("By denial type:")
-    for dtype, count in sorted(stats["by_denial_type"].items()):
+    for dtype, count in sorted(stats.get("by_denial_type", {}).items()):
         click.echo(f"  {dtype}: {count}")
     click.echo("By payer:")
-    for payer, count in sorted(stats["by_payer"].items()):
+    for payer, count in sorted(stats.get("by_payer", {}).items()):
         click.echo(f"  {payer}: {count}")
 
 
