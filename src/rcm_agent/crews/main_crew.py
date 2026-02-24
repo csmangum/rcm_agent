@@ -75,7 +75,7 @@ def _build_pipeline_context_from_output(output: EncounterOutput) -> dict[str, An
     """Extract pipeline context from a crew output to pass to downstream stages."""
     ctx: dict[str, Any] = {}
     if output.stage == RcmStage.CODING_CHARGE_CAPTURE:
-        ctx["coding_result"] = output.raw_result
+        ctx["coding_result"] = output.raw_result.get("suggested_codes", {})
     if output.stage == RcmStage.PRIOR_AUTHORIZATION:
         auth_num = output.raw_result.get("authorization_number") or output.raw_result.get("auth_id")
         if auth_num:

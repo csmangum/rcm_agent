@@ -90,7 +90,7 @@ def _get_default_charge() -> float:
     return float(_rules().get("default_charge", 200.00))
 
 
-DEFAULT_CHARGE: float = 200.00
+DEFAULT_CHARGE: float = _get_default_charge()
 
 
 def get_auth_required_procedures() -> set[str]:
