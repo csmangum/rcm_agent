@@ -292,25 +292,33 @@ def eval_e2e(
     """
     from rcm_agent.crews.e2e_eval import run_e2e_evaluation
 
-    summary = run_e2e_evaluation(
+    result = run_e2e_evaluation(
         examples_dir=examples_dir,
         golden_path=golden,
         output_path=output,
         pipeline_mode=pipeline_mode,
     )
-    click.echo(f"Encounters evaluated: {summary.total}")
-    click.echo(f"Pipeline success rate: {summary.pipeline_success_rate:.1%}")
-    click.echo(f"Escalations: {summary.escalations}")
-    click.echo(f"Prior auth coverage: {summary.prior_auth_produced_count}/{summary.prior_auth_needed_count}")
-    click.echo(f"Claim readiness: {summary.reached_claims_count}/{summary.total}")
-    click.echo(f"Router alignment (vs golden): {summary.router_aligned_count}/{summary.golden_compared_count}")
-    if summary.records:
-        click.echo("\nPer-encounter details:")
-        for r in summary.records:
-            status = "OK" if r.success else "ERROR"
-            click.echo(f"  {r.encounter_id}: [{status}] stages={r.stages_run} -> {r.final_status}")
-            if r.error:
-                click.echo(f"    {r.error}")
+    if isinstance(result, tuple):
+        single_summary, multi_summary = result
+        click.echo(f"Encounters evaluated: {single_summary.total}")
+        click.echo(f"Pipeline success rate (single): {single_summary.pipeline_success_rate:.1%}")
+        click.echo(f"Pipeline success rate (multi): {multi_summary.pipeline_success_rate:.1%}")
+        click.echo("Reports: e2e_eval_single.json, e2e_eval_multi.json")
+    else:
+        summary = result
+        click.echo(f"Encounters evaluated: {summary.total}")
+        click.echo(f"Pipeline success rate: {summary.pipeline_success_rate:.1%}")
+        click.echo(f"Escalations: {summary.escalations}")
+        click.echo(f"Prior auth coverage: {summary.prior_auth_produced_count}/{summary.prior_auth_needed_count}")
+        click.echo(f"Claim readiness: {summary.reached_claims_count}/{summary.total}")
+        click.echo(f"Router alignment (vs golden): {summary.router_aligned_count}/{summary.golden_compared_count}")
+        if summary.records:
+            click.echo("\nPer-encounter details:")
+            for r in summary.records:
+                status = "OK" if r.success else "ERROR"
+                click.echo(f"  {r.encounter_id}: [{status}] stages={r.stages_run} -> {r.final_status}")
+                if r.error:
+                    click.echo(f"    {r.error}")
 
 
 @main.command("eval-all")
@@ -366,13 +374,18 @@ def eval_all(
     click.echo(f"  Router: {router_summary.agreement_rate:.1%} agreement")
 
     click.echo("Running e2e evaluation...")
-    e2e_summary = run_e2e_evaluation(
+    e2e_result = run_e2e_evaluation(
         examples_dir=examples_dir,
         golden_path=golden,
         output_dir=out,
         pipeline_mode=pipeline_mode,
     )
-    click.echo(f"  E2E: {e2e_summary.pipeline_success_rate:.1%} success rate")
+    if isinstance(e2e_result, tuple):
+        single_summary, multi_summary = e2e_result
+        click.echo(f"  E2E (single): {single_summary.pipeline_success_rate:.1%} success rate")
+        click.echo(f"  E2E (multi): {multi_summary.pipeline_success_rate:.1%} success rate")
+    else:
+        click.echo(f"  E2E: {e2e_result.pipeline_success_rate:.1%} success rate")
 
     click.echo(f"\nReports written to {out}/")
     click.echo("  - router_eval.json")

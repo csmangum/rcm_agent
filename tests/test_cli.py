@@ -195,6 +195,12 @@ def test_persistence_cli_pipeline(
         assert row["encounter_id"] == "ENC-001"
         assert row["stage"] in [s.value for s in RcmStage], f"Invalid stage: {row['stage']}"
         assert row["status"] in [s.value for s in EncounterStatus], f"Invalid status: {row['status']}"
+        # ENC-001 routine visit should reach a clean claim outcome
+        assert row["status"] in (
+            EncounterStatus.CLAIM_ACCEPTED.value,
+            EncounterStatus.CLAIM_SUBMITTED.value,
+            EncounterStatus.CODED.value,
+        ), f"ENC-001 should complete with claim outcome, got {row['status']}"
 
         audit = repo.get_audit_log("ENC-001")
         assert len(audit) >= 2, "Audit log should have process_started and workflow_complete"

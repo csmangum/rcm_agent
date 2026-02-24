@@ -51,7 +51,7 @@ Pipeline mode (`--pipeline`):
 
 - `multi` (default): Multi-stage pipeline (`process_encounter_multi_stage`)
 - `single`: Single-stage pipeline (`process_encounter`, one route → one crew)
-- `both`: Runs both; writes `e2e_eval_single.json` and `e2e_eval_multi.json` to output dir
+- `both`: Runs both; writes `e2e_eval_single.json` and `e2e_eval_multi.json` to the output directory. With `eval-all`, that directory is `--output-dir` (default `reports`). With `eval-e2e`, it is the parent of `--output` when a file path is given (e.g. `-o reports/out.json` → `reports/`); if only a filename is given (e.g. `-o out.json`), reports are written to the current working directory.
 
 ### Full suite (router + e2e)
 
