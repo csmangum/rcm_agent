@@ -273,10 +273,18 @@ def eval_router(examples_dir: str | None, output: str | None) -> None:
     type=click.Path(path_type=str),
     help="Path to write JSON evaluation report.",
 )
+@click.option(
+    "--pipeline",
+    "pipeline_mode",
+    default="multi",
+    type=click.Choice(["single", "multi", "both"]),
+    help="Pipeline mode: single (one stage), multi (default), or both (writes e2e_eval_single.json and e2e_eval_multi.json).",
+)
 def eval_e2e(
     examples_dir: str | None,
     golden: str | None,
     output: str | None,
+    pipeline_mode: str,
 ) -> None:
     """Run full pipeline e2e evaluation on synthetic encounters.
 
@@ -288,6 +296,7 @@ def eval_e2e(
         examples_dir=examples_dir,
         golden_path=golden,
         output_path=output,
+        pipeline_mode=pipeline_mode,
     )
     click.echo(f"Encounters evaluated: {summary.total}")
     click.echo(f"Pipeline success rate: {summary.pipeline_success_rate:.1%}")
@@ -324,7 +333,19 @@ def eval_e2e(
     type=click.Path(file_okay=False, dir_okay=True, path_type=str),
     help="Directory to write evaluation reports (default: reports).",
 )
-def eval_all(examples_dir: str | None, golden: str | None, output_dir: str | None) -> None:
+@click.option(
+    "--pipeline",
+    "pipeline_mode",
+    default="multi",
+    type=click.Choice(["single", "multi", "both"]),
+    help="E2E pipeline mode: single, multi (default), or both.",
+)
+def eval_all(
+    examples_dir: str | None,
+    golden: str | None,
+    output_dir: str | None,
+    pipeline_mode: str,
+) -> None:
     """Run full eval suite: router eval + e2e eval. Writes reports to output dir.
 
     Requires OPENAI_API_KEY in .env for LLM-backed evals.
@@ -349,6 +370,7 @@ def eval_all(examples_dir: str | None, golden: str | None, output_dir: str | Non
         examples_dir=examples_dir,
         golden_path=golden,
         output_dir=out,
+        pipeline_mode=pipeline_mode,
     )
     click.echo(f"  E2E: {e2e_summary.pipeline_success_rate:.1%} success rate")
 
