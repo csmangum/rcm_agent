@@ -1,11 +1,11 @@
-APPEAL LETTER - Claim Denial
+APPEAL LETTER – Claim Denial
 
 Payer: UnitedHealthcare
 Member ID: UHC777888
 Encounter ID: ENC-006
 Date of Service: 2026-02-01
 
-DENIAL REASON CODES: CO-4 (Procedure/product not covered by payer)
+DENIAL REASON CODES: CO-4
 CLASSIFICATION: clinical
 APPEAL VIABILITY: Viable
 Procedure not covered; appeal viable with medical necessity and policy documentation.
