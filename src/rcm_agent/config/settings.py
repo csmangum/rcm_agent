@@ -1,14 +1,33 @@
-"""RCM-specific settings loaded from environment."""
+"""RCM-specific settings loaded from environment and YAML config."""
 
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+import yaml
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
-# Load .env if present (no-op if file missing)
 load_dotenv()
+
+_CONFIG_DIR = Path(__file__).resolve().parent
+_ROUTING_RULES_PATH = _CONFIG_DIR / "routing_rules.yaml"
+
+
+@lru_cache(maxsize=1)
+def _load_routing_rules() -> dict[str, Any]:
+    """Load routing_rules.yaml; returns empty dict if missing."""
+    if _ROUTING_RULES_PATH.is_file():
+        with open(_ROUTING_RULES_PATH, encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    return {}
+
+
+def reload_routing_rules() -> dict[str, Any]:
+    """Force-reload routing rules (clears LRU cache). Useful after config changes."""
+    _load_routing_rules.cache_clear()
+    return _load_routing_rules()
 
 
 class EscalationConfig(BaseModel):
@@ -36,27 +55,53 @@ def get_escalation_config() -> EscalationConfig:
     )
 
 
+def _rules() -> dict[str, Any]:
+    return _load_routing_rules()
+
+
 DEFAULT_AUTH_REQUIRED_CPT = {"73721", "70450", "72148", "29881"}
 
-CPT_CHARGE_AMOUNTS: dict[str, float] = {
-    "99213": 150.00,
-    "99223": 450.00,
-    "73721": 800.00,
-    "70450": 400.00,
-    "72148": 600.00,
-    "29881": 3500.00,
-    "27130": 25000.00,
-    "99285": 650.00,
-}
-DEFAULT_CHARGE = 200.00
+
+def _cpt_charge_amounts_from_yaml() -> dict[str, float]:
+    raw = _rules().get("cpt_charge_amounts", {})
+    return {str(k): float(v) for k, v in raw.items()} if raw else {}
+
+
+def _get_cpt_charge_amounts() -> dict[str, float]:
+    yaml_vals = _cpt_charge_amounts_from_yaml()
+    if yaml_vals:
+        return yaml_vals
+    return {
+        "99213": 150.00,
+        "99223": 450.00,
+        "73721": 800.00,
+        "70450": 400.00,
+        "72148": 600.00,
+        "29881": 3500.00,
+        "27130": 25000.00,
+        "99285": 650.00,
+    }
+
+
+CPT_CHARGE_AMOUNTS: dict[str, float] = _get_cpt_charge_amounts()
+
+
+def _get_default_charge() -> float:
+    return float(_rules().get("default_charge", 200.00))
+
+
+DEFAULT_CHARGE: float = 200.00
 
 
 def get_auth_required_procedures() -> set[str]:
-    """List of CPT codes requiring prior authorization (from env or default)."""
+    """CPT codes requiring prior authorization (env var > YAML > hardcoded default)."""
     raw = os.environ.get("AUTH_REQUIRED_CPT_CODES")
-    if not raw or not raw.strip():
-        return set(DEFAULT_AUTH_REQUIRED_CPT)
-    return {code.strip() for code in raw.split(",") if code.strip()}
+    if raw and raw.strip():
+        return {code.strip() for code in raw.split(",") if code.strip()}
+    yaml_list = _rules().get("auth_required_cpt")
+    if yaml_list:
+        return {str(c) for c in yaml_list}
+    return set(DEFAULT_AUTH_REQUIRED_CPT)
 
 
 def get_rag_config() -> dict[str, Any]:
@@ -85,7 +130,10 @@ def get_integrations_config() -> dict[str, Any]:
 
 
 def get_payer_config() -> dict[str, dict[str, Any]]:
-    """Payer-specific rules (hardcoded for MVP; externalize later)."""
+    """Payer-specific rules loaded from YAML config with hardcoded fallback."""
+    yaml_payers = _rules().get("payer_rules")
+    if yaml_payers:
+        return dict(yaml_payers)
     return {
         "UnitedHealthcare": {
             "auth_required_cpt_override": [],
@@ -108,3 +156,28 @@ def get_payer_config() -> dict[str, dict[str, Any]]:
             "common_denial_codes": ["CO-4", "CO-197"],
         },
     }
+
+
+def get_heuristic_keywords() -> dict[str, list[str]]:
+    """Heuristic routing keywords from YAML config."""
+    return _rules().get("heuristic_keywords", {
+        "denial_appeal": ["denial", "appeal", "denied"],
+        "eligibility": ["lapsed", "termination", "terminated", "eligibility"],
+    })
+
+
+def get_multi_stage_sequences() -> dict[str, list[str]]:
+    """Multi-stage routing sequences from YAML config."""
+    return _rules().get("multi_stage_sequences", {
+        "ELIGIBILITY_VERIFICATION": ["PRIOR_AUTHORIZATION", "CODING_CHARGE_CAPTURE"],
+        "PRIOR_AUTHORIZATION": ["CODING_CHARGE_CAPTURE"],
+        "CODING_CHARGE_CAPTURE": ["CLAIMS_SUBMISSION"],
+    })
+
+
+def get_router_llm_config() -> dict[str, Any]:
+    """LLM router configuration from YAML config."""
+    defaults = {"confidence_threshold": 0.9, "model": "gpt-4o-mini"}
+    yaml_cfg = _rules().get("router_llm", {})
+    defaults.update(yaml_cfg or {})
+    return defaults

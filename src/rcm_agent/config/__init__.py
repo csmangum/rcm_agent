@@ -6,9 +6,13 @@ from rcm_agent.config.settings import (
     EscalationConfig,
     get_auth_required_procedures,
     get_escalation_config,
+    get_heuristic_keywords,
     get_integrations_config,
+    get_multi_stage_sequences,
     get_payer_config,
     get_rag_config,
+    get_router_llm_config,
+    reload_routing_rules,
 )
 
 __all__ = [
@@ -17,7 +21,11 @@ __all__ = [
     "EscalationConfig",
     "get_auth_required_procedures",
     "get_escalation_config",
+    "get_heuristic_keywords",
     "get_integrations_config",
+    "get_multi_stage_sequences",
     "get_payer_config",
     "get_rag_config",
+    "get_router_llm_config",
+    "reload_routing_rules",
 ]

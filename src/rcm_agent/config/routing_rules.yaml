@@ -1,0 +1,79 @@
+# Routing rules configuration
+# Externalized from hardcoded settings for maintainability
+
+auth_required_cpt:
+  - "73721"   # MRI knee
+  - "70450"   # CT head
+  - "72148"   # MRI lumbar
+  - "29881"   # Knee arthroscopy
+
+cpt_charge_amounts:
+  "99213": 150.00    # Office visit
+  "99223": 450.00    # Inpatient E&M
+  "73721": 800.00    # MRI knee
+  "70450": 400.00    # CT head
+  "72148": 600.00    # MRI lumbar
+  "29881": 3500.00   # Knee arthroscopy
+  "27130": 25000.00  # Hip replacement
+  "99285": 650.00    # ER visit
+
+default_charge: 200.00
+
+payer_rules:
+  UnitedHealthcare:
+    auth_required_cpt_override: []
+    common_denial_codes:
+      - "CO-4"
+      - "PR-96"
+
+  Aetna:
+    auth_required_cpt_override: []
+    common_denial_codes:
+      - "CO-4"
+      - "CO-197"
+
+  Blue Cross Blue Shield:
+    auth_required_cpt_override: []
+    common_denial_codes:
+      - "CO-4"
+      - "PR-96"
+
+  Cigna:
+    auth_required_cpt_override: []
+    common_denial_codes:
+      - "CO-4"
+      - "PR-96"
+
+  Anthem:
+    auth_required_cpt_override: []
+    common_denial_codes:
+      - "CO-4"
+      - "CO-197"
+
+# Multi-stage routing: define which stages follow which.
+# When a stage completes successfully, the pipeline checks if subsequent stages apply.
+multi_stage_sequences:
+  ELIGIBILITY_VERIFICATION:
+    - "PRIOR_AUTHORIZATION"
+    - "CODING_CHARGE_CAPTURE"
+  PRIOR_AUTHORIZATION:
+    - "CODING_CHARGE_CAPTURE"
+  CODING_CHARGE_CAPTURE:
+    - "CLAIMS_SUBMISSION"
+
+# Heuristic routing keyword triggers
+heuristic_keywords:
+  denial_appeal:
+    - "denial"
+    - "appeal"
+    - "denied"
+  eligibility:
+    - "lapsed"
+    - "termination"
+    - "terminated"
+    - "eligibility"
+
+# Router LLM settings
+router_llm:
+  confidence_threshold: 0.9
+  model: "gpt-4o-mini"
