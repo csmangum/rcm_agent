@@ -9,7 +9,7 @@
     ],
     "cpt_codes": [],
     "confidence": 0.85,
-    "message": "Suggested 1 ICD code(s), 0 CPT code(s) for encounter type EncounterType.office_visit."
+    "message": "Suggested 1 ICD code(s), 0 CPT code(s) for encounter type office_visit."
   },
   "coding_guidelines_snippets": [
     "No guideline snippet on file; refer to current CPT/ICD-10 guidelines."

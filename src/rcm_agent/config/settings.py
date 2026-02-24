@@ -1,5 +1,6 @@
 """RCM-specific settings loaded from environment and YAML config."""
 
+import logging
 import os
 from functools import lru_cache
 from pathlib import Path
@@ -13,15 +14,20 @@ load_dotenv()
 
 _CONFIG_DIR = Path(__file__).resolve().parent
 _ROUTING_RULES_PATH = _CONFIG_DIR / "routing_rules.yaml"
+_logger = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=1)
 def _load_routing_rules() -> dict[str, Any]:
-    """Load routing_rules.yaml; returns empty dict if missing."""
-    if _ROUTING_RULES_PATH.is_file():
+    """Load routing_rules.yaml; returns empty dict if missing or on error."""
+    if not _ROUTING_RULES_PATH.is_file():
+        return {}
+    try:
         with open(_ROUTING_RULES_PATH, encoding="utf-8") as f:
             return yaml.safe_load(f) or {}
-    return {}
+    except (OSError, yaml.YAMLError) as e:
+        _logger.warning("Failed to load routing_rules.yaml: %s; using fallbacks.", e)
+        return {}
 
 
 def reload_routing_rules() -> dict[str, Any]:
@@ -83,9 +89,6 @@ def _get_cpt_charge_amounts() -> dict[str, float]:
     }
 
 
-CPT_CHARGE_AMOUNTS: dict[str, float] = _get_cpt_charge_amounts()
-
-
 def get_cpt_charge_amounts() -> dict[str, float]:
     """CPT charge amounts from YAML config (recomputed on each call, picks up reload)."""
     return _get_cpt_charge_amounts()
@@ -98,9 +101,6 @@ def _get_default_charge() -> float:
 def get_default_charge() -> float:
     """Default charge amount from YAML config (recomputed on each call, picks up reload)."""
     return _get_default_charge()
-
-
-DEFAULT_CHARGE: float = _get_default_charge()
 
 
 def get_auth_required_procedures() -> set[str]:

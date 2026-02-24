@@ -7,7 +7,7 @@ import logging
 import os
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from rcm_agent.config import (
     get_auth_required_procedures,
@@ -34,6 +34,15 @@ class MultiStageRouterResult(BaseModel):
     stages: list[RcmStage]
     results: list[RouterResult]
     reasoning: str
+
+    @model_validator(mode="after")
+    def _stages_and_results_non_empty_and_equal_length(self) -> "MultiStageRouterResult":
+        if len(self.stages) != len(self.results) or len(self.stages) == 0:
+            raise ValueError(
+                "MultiStageRouterResult requires len(stages) == len(results) > 0, "
+                f"got stages={len(self.stages)}, results={len(self.results)}"
+            )
+        return self
 
     @property
     def primary_stage(self) -> RcmStage:
@@ -65,9 +74,8 @@ def classify_encounter(encounter: Encounter) -> RouterResult:
     procedure_codes = {p.code for p in encounter.procedures}
     auth_cpt = get_auth_required_procedures()
     keywords = get_heuristic_keywords()
-
-    denial_kw = keywords.get("denial_appeal", ["denial", "appeal", "denied"])
-    eligibility_kw = keywords.get("eligibility", ["lapsed", "termination", "terminated", "eligibility"])
+    denial_kw = keywords.get("denial_appeal", [])
+    eligibility_kw = keywords.get("eligibility", [])
 
     if encounter.denial_info is not None:
         return RouterResult(
@@ -267,7 +275,7 @@ def _needs_stage(encounter: Encounter, stage: RcmStage) -> bool:
     if stage == RcmStage.ELIGIBILITY_VERIFICATION:
         notes_lower = (encounter.clinical_notes or "").lower()
         keywords = get_heuristic_keywords()
-        eligibility_kw = keywords.get("eligibility", ["lapsed", "termination", "terminated", "eligibility"])
+        eligibility_kw = keywords.get("eligibility", [])
         return any(kw in notes_lower for kw in eligibility_kw)
 
     if stage == RcmStage.PRIOR_AUTHORIZATION:

@@ -1,18 +1,21 @@
 """Tests for intelligent routing: multi-stage, LLM-based, hybrid, config, and evaluation."""
 
 import json
+import tempfile
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import ValidationError
 
+from rcm_agent.config import get_cpt_charge_amounts, reload_routing_rules
 from rcm_agent.config.settings import (
+    _load_routing_rules,
     get_heuristic_keywords,
     get_multi_stage_sequences,
     get_payer_config,
     get_router_llm_config,
-    reload_routing_rules,
 )
 from rcm_agent.crews.main_crew import process_encounter_multi_stage
 from rcm_agent.crews.router import (
@@ -37,6 +40,8 @@ from rcm_agent.crews.router_eval import (
 from rcm_agent.models import (
     DiagnosisCode,
     Encounter,
+    EncounterOutput,
+    EncounterStatus,
     EncounterType,
     Insurance,
     Patient,
@@ -118,6 +123,16 @@ class TestMultiStageRouting:
         assert result.primary_stage == RcmStage.PRIOR_AUTHORIZATION
         assert result.primary_confidence == 1.0
 
+    def test_multi_stage_router_result_rejects_empty_stages(self) -> None:
+        """MultiStageRouterResult raises ValidationError when stages/results are empty."""
+        with pytest.raises(ValidationError) as exc_info:
+            MultiStageRouterResult(
+                stages=[],
+                results=[],
+                reasoning="",
+            )
+        assert "len(stages)" in str(exc_info.value) or "len(results)" in str(exc_info.value)
+
     def test_encounter_needing_eligibility_and_prior_auth(self) -> None:
         """Encounter with eligibility keywords AND auth-required CPT gets both stages."""
         enc = _make_encounter(
@@ -173,6 +188,30 @@ class TestMultiStagePipeline:
         assert len(outputs) == 1
         assert outputs[0].stage == RcmStage.HUMAN_ESCALATION
         assert "router_stages" in outputs[0].raw_result
+
+    def test_process_multi_stage_halts_on_not_eligible(
+        self, examples_dir: Path
+    ) -> None:
+        """When first stage returns NOT_ELIGIBLE, pipeline returns single output and does not run later stages."""
+        enc = _load_encounter(examples_dir, "encounter_005_eligibility_mismatch.json")
+        not_eligible_output = EncounterOutput(
+            encounter_id=enc.encounter_id,
+            stage=RcmStage.ELIGIBILITY_VERIFICATION,
+            status=EncounterStatus.NOT_ELIGIBLE,
+            actions_taken=["check_member_eligibility"],
+            artifacts=[],
+            message="Eligibility check: coverage lapsed or terminated.",
+            raw_result={"eligibility": {"eligible": False}},
+        )
+
+        with patch("rcm_agent.crews.main_crew.dispatch_to_crew") as mock_dispatch:
+            mock_dispatch.return_value = not_eligible_output
+            outputs = process_encounter_multi_stage(enc)
+
+        assert len(outputs) == 1
+        assert outputs[0].status == EncounterStatus.NOT_ELIGIBLE
+        assert outputs[0].stage == RcmStage.ELIGIBILITY_VERIFICATION
+        mock_dispatch.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -386,6 +425,24 @@ class TestExternalizedConfig:
         assert "confidence_threshold" in cfg
         assert "model" in cfg
         assert isinstance(cfg["confidence_threshold"], (int, float))
+
+    def test_config_reload_picks_up_yaml_changes(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """After reload_routing_rules() with different YAML content, getters return updated values."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write("cpt_charge_amounts:\n  \"99213\": 999.0\n  \"73721\": 1.0\n")
+            custom_path = Path(f.name)
+        try:
+            monkeypatch.setattr("rcm_agent.config.settings._ROUTING_RULES_PATH", custom_path)
+            _load_routing_rules.cache_clear()
+            reload_routing_rules()
+            amounts = get_cpt_charge_amounts()
+            assert amounts.get("99213") == 999.0
+            assert amounts.get("73721") == 1.0
+        finally:
+            custom_path.unlink(missing_ok=True)
+            _load_routing_rules.cache_clear()
+            monkeypatch.undo()
+            _load_routing_rules.cache_clear()
 
 
 # ---------------------------------------------------------------------------

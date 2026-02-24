@@ -23,6 +23,26 @@ from rcm_agent.models import Encounter
 
 logger = logging.getLogger(__name__)
 
+# Marker file used to find project root when resolving default examples path
+_PROJECT_ROOT_MARKER = "pyproject.toml"
+
+
+def _default_examples_dir() -> Path:
+    """Resolve default examples directory: RCM_EXAMPLES_DIR env, else repo root / data / examples."""
+    env_dir = os.environ.get("RCM_EXAMPLES_DIR", "").strip()
+    if env_dir:
+        return Path(env_dir).expanduser().resolve()
+    # Walk up from this file to find pyproject.toml (repo root)
+    path = Path(__file__).resolve().parent
+    for _ in range(6):
+        if (path / _PROJECT_ROOT_MARKER).is_file():
+            return path / "data" / "examples"
+        if path.parent == path:
+            break
+        path = path.parent
+    # Fallback: same as before (crews -> rcm_agent -> src -> project root = 3 parents from crews)
+    return Path(__file__).resolve().parent.parent.parent.parent / "data" / "examples"
+
 
 @dataclass
 class EvalRecord:
@@ -213,15 +233,15 @@ def run_evaluation(
     Run router evaluation across synthetic encounters.
 
     Args:
-        examples_dir: directory containing encounter JSON files.
-                      Defaults to data/examples.
+        examples_dir: directory containing encounter JSON files. Defaults to
+            RCM_EXAMPLES_DIR if set, else repo root (pyproject.toml) / data / examples.
         output_path: optional path to write JSON report.
 
     Returns:
         EvalSummary with per-encounter records and aggregate stats.
     """
     if examples_dir is None:
-        examples_dir = Path(__file__).resolve().parent.parent.parent.parent / "data" / "examples"
+        examples_dir = _default_examples_dir()
     examples_dir = Path(examples_dir)
 
     logger.info("Loading encounters from %s", examples_dir)

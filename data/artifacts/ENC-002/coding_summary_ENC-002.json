@@ -15,7 +15,7 @@
       }
     ],
     "confidence": 0.85,
-    "message": "Suggested 1 ICD code(s), 1 CPT code(s) for encounter type EncounterType.outpatient_procedure."
+    "message": "Suggested 1 ICD code(s), 1 CPT code(s) for encounter type outpatient_procedure."
   },
   "coding_guidelines_snippets": [
     "No guideline snippet on file; refer to current CPT/ICD-10 guidelines."

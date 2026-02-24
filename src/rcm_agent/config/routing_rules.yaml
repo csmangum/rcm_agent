@@ -1,5 +1,5 @@
 # Routing rules configuration
-# Externalized from hardcoded settings for maintainability
+# Precedence: env vars > YAML > hardcoded defaults (where applicable, e.g. AUTH_REQUIRED_CPT_CODES).
 
 auth_required_cpt:
   - "73721"   # MRI knee
