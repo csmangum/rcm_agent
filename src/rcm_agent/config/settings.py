@@ -170,18 +170,19 @@ def get_payer_config() -> dict[str, dict[str, Any]]:
 
 def get_heuristic_keywords() -> dict[str, list[str]]:
     """Heuristic routing keywords from YAML config."""
-    return _rules().get(
+    result = _rules().get(
         "heuristic_keywords",
         {
             "denial_appeal": ["denial", "appeal", "denied"],
             "eligibility": ["lapsed", "termination", "terminated", "eligibility"],
         },
     )
+    return {k: list(v) for k, v in result.items()}
 
 
 def get_multi_stage_sequences() -> dict[str, list[str]]:
     """Multi-stage routing sequences from YAML config."""
-    return _rules().get(
+    result = _rules().get(
         "multi_stage_sequences",
         {
             "ELIGIBILITY_VERIFICATION": ["PRIOR_AUTHORIZATION", "CODING_CHARGE_CAPTURE"],
@@ -189,6 +190,7 @@ def get_multi_stage_sequences() -> dict[str, list[str]]:
             "CODING_CHARGE_CAPTURE": ["CLAIMS_SUBMISSION"],
         },
     )
+    return {k: list(v) for k, v in result.items()}
 
 
 def get_router_llm_config() -> dict[str, Any]:
