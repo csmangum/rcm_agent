@@ -32,7 +32,7 @@ def test_claims_stub_get_remit_returns_stub_response():
     assert r["stub"] is True
     assert r["operation"] == "get_remit"
     assert r["claim_id"] == "some-id"
-    assert r["payment"] is None
+    assert r["paid_amount"] is None
     assert r["adjustments"] == []
     assert "message" in r
 

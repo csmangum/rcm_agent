@@ -1,0 +1,57 @@
+{
+  "encounter_id": "ENC-003",
+  "claim_id": "CLM-24DD21C9",
+  "tracking_number": "TRK-B18F10",
+  "payer": "Blue Cross Blue Shield",
+  "member_id": "BCBS555111222",
+  "date_of_service": "2026-02-12",
+  "total_charges": 25450.0,
+  "allowed_amount": 22910.0,
+  "paid_amount": 18328.0,
+  "patient_responsibility": 4582.0,
+  "adjustments": [
+    {
+      "group_code": "CO",
+      "reason_code": "45",
+      "amount": 2540.0,
+      "description": "Charge exceeds fee schedule/maximum allowable."
+    },
+    {
+      "group_code": "PR",
+      "reason_code": "2",
+      "amount": 4582.0,
+      "description": "Coinsurance amount (20%)."
+    }
+  ],
+  "check_number": "CHK-15E563",
+  "remit_date": "2026-02-24T03:06:37Z",
+  "status": "paid",
+  "line_items": [
+    {
+      "line_number": 1,
+      "cpt_code": "27130",
+      "description": "Total hip arthroplasty",
+      "icd_pointers": [
+        "M16.11",
+        "Z96.641"
+      ],
+      "modifiers": [],
+      "units": 1,
+      "charge_amount": 25000.0
+    },
+    {
+      "line_number": 2,
+      "cpt_code": "99223",
+      "description": "Initial hospital care, high complexity",
+      "icd_pointers": [
+        "M16.11",
+        "Z96.641"
+      ],
+      "modifiers": [
+        "57"
+      ],
+      "units": 1,
+      "charge_amount": 450.0
+    }
+  ]
+}

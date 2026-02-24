@@ -5,17 +5,18 @@ from pathlib import Path
 
 import pytest
 
-from rcm_agent.integrations.registry import get_prior_auth_backend
+from rcm_agent.integrations.registry import get_claims_backend, get_prior_auth_backend
 from rcm_agent.models import Encounter
 
 
 @pytest.fixture(autouse=True)
-def reset_mock_auth_store() -> None:
-    """Reset prior-auth backend store before each test to avoid cross-test contamination."""
-    backend = get_prior_auth_backend()
-    reset = getattr(backend, "reset", None)
-    if reset is not None:
-        reset()
+def reset_mock_stores() -> None:
+    """Reset prior-auth and claims backend stores before each test."""
+    for backend_fn in (get_prior_auth_backend, get_claims_backend):
+        backend = backend_fn()
+        reset = getattr(backend, "reset", None)
+        if reset is not None:
+            reset()
 
 
 @pytest.fixture
