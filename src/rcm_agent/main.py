@@ -232,7 +232,7 @@ def denial_stats(ctx: click.Context) -> None:
 def eval_router(examples_dir: str | None, output: str | None) -> None:
     """Evaluate router: compare heuristic vs LLM classifications across encounters.
 
-    Set RCM_ROUTER_LLM_ENABLED=true and OPENAI_API_KEY in .env for LLM comparison.
+    LLM is on by default; set RCM_ROUTER_LLM_ENABLED=false for heuristic-only. Requires OPENAI_API_KEY for LLM.
     """
     from rcm_agent.crews.router_eval import run_evaluation
 

@@ -449,8 +449,9 @@ class TestExternalizedConfig:
 
 
 class TestRouterEvaluation:
-    def test_evaluate_encounter_without_llm(self, encounter_001: Encounter) -> None:
+    def test_evaluate_encounter_without_llm(self, encounter_001: Encounter, monkeypatch: pytest.MonkeyPatch) -> None:
         """Without LLM, evaluation records LLM as unavailable."""
+        monkeypatch.setenv("RCM_ROUTER_LLM_ENABLED", "false")
         record = evaluate_encounter(encounter_001)
         assert isinstance(record, EvalRecord)
         assert record.encounter_id == "ENC-001"
@@ -489,8 +490,9 @@ class TestRouterEvaluation:
         assert not record.agrees
         assert "DISAGREEMENT" in record.notes
 
-    def test_evaluate_encounters_summary(self, examples_dir: Path) -> None:
+    def test_evaluate_encounters_summary(self, examples_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         """evaluate_encounters returns proper summary stats."""
+        monkeypatch.setenv("RCM_ROUTER_LLM_ENABLED", "false")
         encounters = load_encounters_from_dir(examples_dir)
         assert len(encounters) >= 5
         summary = evaluate_encounters(encounters)
@@ -531,7 +533,8 @@ class TestRouterEvaluation:
         assert "ENC-001" in ids
         assert "ENC-002" in ids
 
-    def test_run_evaluation_writes_report(self, examples_dir: Path, tmp_path: Path) -> None:
+    def test_run_evaluation_writes_report(self, examples_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("RCM_ROUTER_LLM_ENABLED", "false")
         output_path = tmp_path / "eval_report.json"
         summary = run_evaluation(examples_dir=examples_dir, output_path=output_path)
         assert output_path.exists()

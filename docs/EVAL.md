@@ -5,7 +5,7 @@ The RCM Agent evaluation suite measures how well the app performs on synthetic e
 ## Prerequisites
 
 - **OpenRouter / LLM access:** Set `OPENAI_API_KEY`, `OPENAI_API_BASE`, and `OPENAI_MODEL_NAME` in `.env`. The project uses these for CrewAI/LiteLLM.
-- **Router LLM comparison:** Set `RCM_ROUTER_LLM_ENABLED=true` in `.env` to compare heuristic vs LLM routing (otherwise router eval uses heuristic only).
+- **Router LLM comparison:** LLM routing is on by default; set `RCM_ROUTER_LLM_ENABLED=false` to use heuristic-only comparison.
 - **E2E evals:** Always use the real LLM; ensure `OPENAI_API_KEY` is set.
 
 ## What the Suite Measures
@@ -37,7 +37,7 @@ With custom examples directory:
 rcm-agent eval-router --examples-dir data/examples -o reports/router_eval.json
 ```
 
-For LLM comparison, set `RCM_ROUTER_LLM_ENABLED=true` in `.env` before running.
+LLM comparison is on by default; set `RCM_ROUTER_LLM_ENABLED=false` to disable.
 
 ### E2E-only
 
@@ -103,6 +103,30 @@ When golden data exists, e2e eval computes:
 - **Router alignment rate:** fraction of encounters where pipeline stages include all `expected_stages`
 - **Final status alignment rate:** when `expected_final_status` is set (non-null), fraction where actual final status matches
 - **Needs prior auth alignment rate:** when `needs_prior_auth` is set, fraction where encounter’s prior-auth need matches the golden value
+
+## Coverage and limitations
+
+The eval suite is **not** comprehensive to the entire RCM agentic system. It covers a subset of behaviors and scenarios.
+
+**What is covered**
+
+- **Router:** Heuristic vs LLM agreement (primary stage and multi-stage sequence) on all example encounters.
+- **E2E pipeline:** Multi-stage pipeline only (`process_encounter_multi_stage`) on the same 6 synthetic encounters. Metrics: success rate, router alignment (vs golden), prior-auth coverage, claim readiness, escalation count.
+- **Stages exercised in examples:** Eligibility (005), prior auth (002), coding + claims (001, 002), denial/appeal (004, 006), escalation (003 via high charges).
+- **Golden expectations:** Only ENC-001, ENC-002, ENC-004 have golden entries; ENC-003, ENC-005, ENC-006 have no expected_stages/expected_final_status.
+
+**What is not covered**
+
+- **Single-stage pipeline:** `process_encounter` (single-stage route → crew) is never run in eval; only multi-stage is evaluated.
+- **INTAKE / HUMAN_ESCALATION as router outputs:** Router can return INTAKE or HUMAN_ESCALATION; no examples or metrics target those paths explicitly (escalation is only measured when the pipeline returns HUMAN_ESCALATION due to escalation check, not router).
+- **RAG quality:** Eval uses default backends (typically mock). No assessment of RAG-backed coding guidelines or payer policy retrieval.
+- **Integrations:** All backends are mock (eligibility, prior auth, claims). No evaluation of HTTP or real payer behavior.
+- **Persistence:** No checks that DB state or audit trail are correct after a run.
+- **Crew output quality:** No metrics on coding accuracy, appeal packet quality, or eligibility output correctness—only pipeline success and router alignment.
+- **Failure scenarios:** No encounter with expected AUTH_DENIED or CLAIM_DENIED; no golden expectations for remittance denial or appeal failure.
+- **CLI and other entrypoints:** Eval does not run via `rcm-agent process` (CLI + persistence); it calls the pipeline directly.
+
+To make the eval more comprehensive, consider: adding golden entries for all encounters (003, 005, 006); adding scenarios for AUTH_DENIED and CLAIM_DENIED; evaluating single-stage pipeline; optionally evaluating with RAG and HTTP backends; and adding crew-level or outcome-quality metrics.
 
 ## Interpreting Metrics
 

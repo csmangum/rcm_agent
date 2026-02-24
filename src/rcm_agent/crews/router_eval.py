@@ -126,14 +126,14 @@ class EvalSummary:
 def evaluate_encounter(encounter: Encounter) -> EvalRecord:
     """Run both heuristic and LLM classification on a single encounter.
 
-    LLM classification is only performed when RCM_ROUTER_LLM_ENABLED is set to a
-    truthy value, keeping evaluation deterministic by default.
+    LLM classification runs by default; set RCM_ROUTER_LLM_ENABLED=false to use
+    heuristic-only (deterministic) evaluation.
     """
     heuristic = classify_encounter(encounter)
     heuristic_multi = classify_encounter_multi_stage(encounter)
     llm_result: MultiStageRouterResult | None = None
 
-    llm_enabled = os.environ.get("RCM_ROUTER_LLM_ENABLED", "false").strip().lower() in ("true", "1", "yes", "on")
+    llm_enabled = os.environ.get("RCM_ROUTER_LLM_ENABLED", "true").strip().lower() in ("true", "1", "yes", "on")
     if llm_enabled:
         try:
             llm_result = llm_classify_encounter(encounter)
