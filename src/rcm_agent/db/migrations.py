@@ -138,8 +138,11 @@ def _applied_versions(conn: sqlite3.Connection) -> set[int]:
 
 def migrate(db_path: str) -> list[int]:
     """Apply all pending migrations to *db_path*.  Returns list of newly-applied version numbers."""
-    conn = sqlite3.connect(db_path)
-    conn.execute("PRAGMA foreign_keys = ON")
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.execute("PRAGMA foreign_keys = ON")
+    except sqlite3.Error as exc:
+        raise MigrationError(f"Failed to open database {db_path}: {exc}") from exc
     try:
         _ensure_migration_table(conn)
         applied = _applied_versions(conn)
@@ -172,7 +175,10 @@ def migrate(db_path: str) -> list[int]:
 
 def current_version(db_path: str) -> int:
     """Return the highest applied migration version, or 0 if none."""
-    conn = sqlite3.connect(db_path)
+    try:
+        conn = sqlite3.connect(db_path)
+    except sqlite3.Error as exc:
+        raise MigrationError(f"Failed to open database {db_path}: {exc}") from exc
     try:
         _ensure_migration_table(conn)
         cur = conn.execute("SELECT MAX(version) FROM schema_migrations")

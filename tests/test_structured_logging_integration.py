@@ -24,8 +24,12 @@ def capture_json_logs():
         get_logger("rcm_agent.db.repository"),
     ]
     original_handlers = {}
+    original_levels = {}
+    original_propagate = {}
     for lgr in loggers:
         original_handlers[lgr.name] = lgr.handlers[:]
+        original_levels[lgr.name] = lgr.level
+        original_propagate[lgr.name] = lgr.propagate
         lgr.handlers.clear()
         lgr.addHandler(handler)
         lgr.setLevel(logging.DEBUG)
@@ -42,6 +46,8 @@ def capture_json_logs():
         lgr.handlers.clear()
         for h in original_handlers[lgr.name]:
             lgr.addHandler(h)
+        lgr.setLevel(original_levels[lgr.name])
+        lgr.propagate = original_propagate[lgr.name]
 
 
 def test_router_classification_emits_encounter_id(capture_json_logs, encounter_001: Encounter):
