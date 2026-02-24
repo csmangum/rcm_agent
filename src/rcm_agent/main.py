@@ -192,5 +192,69 @@ def denial_stats(ctx: click.Context) -> None:
         click.echo(f"  {payer}: {count}")
 
 
+@main.command("eval-router")
+@click.option(
+    "--examples-dir",
+    default=None,
+    type=click.Path(exists=True, path_type=str),
+    help="Directory containing encounter JSON files (default: data/examples).",
+)
+@click.option(
+    "--output",
+    "-o",
+    default=None,
+    type=click.Path(path_type=str),
+    help="Path to write JSON evaluation report.",
+)
+def eval_router(examples_dir: str | None, output: str | None) -> None:
+    """Evaluate router: compare heuristic vs LLM classifications across encounters."""
+    import logging
+
+    from rcm_agent.crews.router_eval import run_evaluation
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    summary = run_evaluation(examples_dir=examples_dir, output_path=output)
+    click.echo(f"Encounters evaluated: {summary.total}")
+    click.echo(f"Primary stage agreements: {summary.agreements}")
+    click.echo(f"Primary stage disagreements: {summary.disagreements}")
+    click.echo(f"LLM failures: {summary.llm_failures}")
+    click.echo(f"Agreement rate: {summary.agreement_rate:.1%}")
+    click.echo(f"Multi-stage agreements: {summary.multi_stage_agreements}")
+    click.echo(f"Multi-stage disagreements: {summary.multi_stage_disagreements}")
+    if summary.records:
+        click.echo("\nPer-encounter details:")
+        for r in summary.records:
+            marker = "OK" if r.agrees else ("LLM_FAIL" if r.llm_stage is None else "DISAGREE")
+            click.echo(f"  {r.encounter_id}: [{marker}] heuristic={r.heuristic_stage} llm={r.llm_stage or 'N/A'}")
+            if r.notes:
+                click.echo(f"    {r.notes}")
+
+
+@main.command("process-multi")
+@click.argument("encounter_file", type=click.Path(exists=True, path_type=str))
+@click.pass_context
+def process_multi(ctx: click.Context, encounter_file: str) -> None:
+    """Process an encounter through multi-stage pipeline."""
+    path = Path(encounter_file)
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        encounter = Encounter.model_validate(data)
+    except json.JSONDecodeError as e:
+        click.echo(f"Invalid JSON in {encounter_file}: {e}", err=True)
+        raise SystemExit(1) from None
+    except Exception as e:
+        click.echo(f"Invalid encounter data in {encounter_file}: {e}", err=True)
+        raise SystemExit(1) from None
+
+    from rcm_agent.crews.main_crew import process_encounter_multi_stage
+
+    outputs = process_encounter_multi_stage(encounter)
+    click.echo(f"Encounter {encounter.encounter_id}: {len(outputs)} stage(s) executed")
+    for i, output in enumerate(outputs, 1):
+        click.echo(f"  Stage {i}: {output.stage.value} -> {output.status.value}")
+        click.echo(f"    {output.message}")
+
+
 if __name__ == "__main__":
     main()
