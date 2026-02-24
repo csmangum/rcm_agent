@@ -41,8 +41,7 @@
   "clinical_justification": "Extracted 0 diagnosis codes, 1 symptoms, 12 necessity indicators. Patient with chronic right knee pain, failed conservative therapy including PT and NSAIDs. MRI ordered to evaluate for meniscal tear.",
   "policy_references": {
     "73721": [
-      "MRI knee without contrast requires prior auth for non-emergent indications.",
-      "Document failed conservative treatment (PT, NSAIDs) and clinical indication for MRI."
+      "Custom RAG policy snippet for 73721"
     ]
   },
   "clinical_notes_excerpt": "Patient with chronic right knee pain, failed conservative therapy including PT and NSAIDs. MRI ordered to evaluate for meniscal tear."

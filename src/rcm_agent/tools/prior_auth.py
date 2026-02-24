@@ -1,10 +1,9 @@
-"""Prior authorization tools: clinical extraction, policy stub, auth packet assembly, mock submit/poll."""
+"""Prior authorization tools: clinical extraction, policy stub, auth packet assembly, submit/poll via backend."""
 
 import re
-import uuid
-from datetime import datetime, timezone
 from typing import Any, Callable
 
+from rcm_agent.integrations.registry import get_prior_auth_backend
 from rcm_agent.models import Encounter
 
 
@@ -33,14 +32,6 @@ _MOCK_POLICY_SNIPPETS: dict[tuple[str, str], list[str]] = {
         "Total hip arthroplasty requires prior auth. Document osteoarthritis severity and failed non-surgical care.",
     ],
 }
-
-# Mock submitted auth requests: auth_id -> {packet, status, decision}.
-_MOCK_AUTH_STORE: dict[str, dict[str, Any]] = {}
-
-
-def _reset_auth_store() -> None:
-    """Clear the mock auth store (for tests)."""
-    _MOCK_AUTH_STORE.clear()
 
 
 def extract_clinical_indicators(clinical_notes: str) -> dict[str, Any]:
@@ -103,45 +94,10 @@ def assemble_auth_packet(
 
 
 def submit_auth_request(auth_packet: dict[str, Any]) -> dict[str, Any]:
-    """
-    Mock submission: generate auth_id, store packet, return pending status.
-    """
-    auth_id = f"AUTH-{uuid.uuid4().hex[:8].upper()}"
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    _MOCK_AUTH_STORE[auth_id] = {
-        "auth_packet": auth_packet,
-        "status": "submitted",
-        "decision": None,
-        "submitted_at": now,
-    }
-    return {
-        "auth_id": auth_id,
-        "status": "submitted",
-        "submitted_at": now,
-        "message": "Prior auth request submitted successfully (mock).",
-    }
+    """Submit prior auth request via configured backend."""
+    return get_prior_auth_backend().submit_auth_request(auth_packet)
 
 
 def poll_auth_status(auth_id: str) -> dict[str, Any]:
-    """
-    Mock status check: for known auth IDs return approved (POC simulates instant approval).
-    """
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    if auth_id in _MOCK_AUTH_STORE:
-        record = _MOCK_AUTH_STORE[auth_id]
-        # Simulate approval for all mock submissions
-        record["status"] = "approved"
-        record["decision"] = "approved"
-        record["decision_date"] = now
-        return {
-            "auth_id": auth_id,
-            "status": "approved",
-            "decision": "approved",
-            "decision_date": now,
-        }
-    return {
-        "auth_id": auth_id,
-        "status": "pending",
-        "decision": None,
-        "message": "Auth request not found or still pending (mock).",
-    }
+    """Poll prior auth status via configured backend."""
+    return get_prior_auth_backend().poll_auth_status(auth_id)

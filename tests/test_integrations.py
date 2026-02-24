@@ -1,7 +1,19 @@
-"""Tests for integration protocols and stub implementations."""
+"""Tests for integration protocols, stub implementations, and config-driven backend selection."""
 
-from rcm_agent.integrations import ClaimsBackend, EligibilityBackend
-from rcm_agent.integrations.claims_stub import ClaimsStub
+import os
+
+import pytest
+
+from rcm_agent.config import get_integrations_config
+from rcm_agent.integrations import (
+    ClaimsBackend,
+    ClaimsStub,
+    EligibilityBackend,
+    EligibilityMock,
+    get_eligibility_backend,
+    get_prior_auth_backend,
+    reset_integration_backends,
+)
 
 
 # --- ClaimsStub behavior ---
@@ -93,22 +105,72 @@ def _check_eligible(backend: EligibilityBackend, payer: str, member_id: str) -> 
 
 
 def test_eligibility_backend_swap_different_outcomes():
-    from rcm_agent.tools.eligibility import check_member_eligibility
-
-    # Wrap existing tool in a minimal adapter for this test only
-    class ToolEligibilityAdapter:
-        def check_member_eligibility(self, payer: str, member_id: str, date_of_service: str):
-            return check_member_eligibility(payer, member_id, date_of_service)
-
-        def verify_benefits(self, payer: str, member_id: str, procedure_codes: list):
-            from rcm_agent.tools.eligibility import verify_benefits
-            return verify_benefits(payer, member_id, procedure_codes)
-
-    real_mock = ToolEligibilityAdapter()
+    default_mock = get_eligibility_backend()
     alternate = AlwaysIneligibleEligibilityBackend()
 
-    # Real mock: Aetna member is eligible
-    assert _check_eligible(real_mock, "Aetna", "AET123456789") is True
+    # Default mock (EligibilityMock): Aetna member is eligible
+    assert _check_eligible(default_mock, "Aetna", "AET123456789") is True
 
     # Alternate: same member appears not eligible (different backend)
     assert _check_eligible(alternate, "Aetna", "AET123456789") is False
+
+
+# --- Config-driven backend selection ---
+
+
+def test_get_integrations_config_default():
+    """With no env vars, both backends default to 'mock'."""
+    cfg = get_integrations_config()
+    assert cfg["eligibility"] == "mock"
+    assert cfg["prior_auth"] == "mock"
+
+
+def test_get_integrations_config_from_env(monkeypatch):
+    """ELIGIBILITY_BACKEND and PRIOR_AUTH_BACKEND are read from environment."""
+    monkeypatch.setenv("ELIGIBILITY_BACKEND", "mock")
+    monkeypatch.setenv("PRIOR_AUTH_BACKEND", "mock")
+    cfg = get_integrations_config()
+    assert cfg["eligibility"] == "mock"
+    assert cfg["prior_auth"] == "mock"
+
+    monkeypatch.setenv("ELIGIBILITY_BACKEND", "FHIR")
+    cfg = get_integrations_config()
+    assert cfg["eligibility"] == "fhir"
+
+
+def test_registry_returns_mock_by_default():
+    """Default (no env) yields EligibilityMock and PriorAuthMock."""
+    reset_integration_backends()
+    # Ensure no env override
+    os.environ.pop("ELIGIBILITY_BACKEND", None)
+    os.environ.pop("PRIOR_AUTH_BACKEND", None)
+    elig = get_eligibility_backend()
+    pa = get_prior_auth_backend()
+    assert isinstance(elig, EligibilityMock)
+    assert type(pa).__name__ == "PriorAuthMock"
+
+
+def test_registry_explicit_mock_via_env(monkeypatch):
+    """Explicit ELIGIBILITY_BACKEND=mock still yields EligibilityMock."""
+    reset_integration_backends()
+    monkeypatch.setenv("ELIGIBILITY_BACKEND", "mock")
+    assert isinstance(get_eligibility_backend(), EligibilityMock)
+
+
+def test_registry_unknown_eligibility_backend_raises(monkeypatch):
+    """Unknown ELIGIBILITY_BACKEND raises ValueError with supported list."""
+    reset_integration_backends()
+    monkeypatch.setenv("ELIGIBILITY_BACKEND", "fhir")
+    with pytest.raises(ValueError) as exc_info:
+        get_eligibility_backend()
+    assert "fhir" in str(exc_info.value)
+    assert "mock" in str(exc_info.value).lower() or "Supported" in str(exc_info.value)
+
+
+def test_registry_unknown_prior_auth_backend_raises(monkeypatch):
+    """Unknown PRIOR_AUTH_BACKEND raises ValueError."""
+    reset_integration_backends()
+    monkeypatch.setenv("PRIOR_AUTH_BACKEND", "fhir")
+    with pytest.raises(ValueError) as exc_info:
+        get_prior_auth_backend()
+    assert "fhir" in str(exc_info.value)
