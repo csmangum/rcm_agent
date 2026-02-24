@@ -163,9 +163,7 @@ def migrate(db_path: str) -> list[int]:
                 newly_applied.append(m.version)
             except sqlite3.Error as exc:
                 conn.rollback()
-                raise MigrationError(
-                    f"Migration v{m.version} ({m.description}) failed: {exc}"
-                ) from exc
+                raise MigrationError(f"Migration v{m.version} ({m.description}) failed: {exc}") from exc
 
         return newly_applied
     finally:

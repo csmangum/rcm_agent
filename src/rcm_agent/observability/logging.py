@@ -20,7 +20,6 @@ import sys
 from datetime import datetime, timezone
 from typing import Any
 
-
 _SETUP_DONE = False
 
 

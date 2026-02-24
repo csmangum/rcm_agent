@@ -14,7 +14,6 @@ from rcm_agent.config import (
     get_multi_stage_sequences,
     get_router_llm_config,
 )
-from rcm_agent.exceptions import RoutingError
 from rcm_agent.models import Encounter, RcmStage
 from rcm_agent.observability.logging import get_logger
 
@@ -37,7 +36,7 @@ class MultiStageRouterResult(BaseModel):
     reasoning: str
 
     @model_validator(mode="after")
-    def _stages_and_results_non_empty_and_equal_length(self) -> "MultiStageRouterResult":
+    def _stages_and_results_non_empty_and_equal_length(self) -> MultiStageRouterResult:
         if len(self.stages) != len(self.results) or len(self.stages) == 0:
             raise ValueError(
                 "MultiStageRouterResult requires len(stages) == len(results) > 0, "

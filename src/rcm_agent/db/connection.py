@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import sqlite3
 import threading
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
 from rcm_agent.exceptions import DatabaseError
 
