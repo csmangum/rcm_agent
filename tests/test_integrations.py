@@ -1,6 +1,7 @@
 """Tests for integration protocols and stub implementations."""
 
-from rcm_agent.integrations import ClaimsBackend, ClaimsStub, EligibilityBackend
+from rcm_agent.integrations import ClaimsBackend, EligibilityBackend
+from rcm_agent.integrations.claims_stub import ClaimsStub
 
 
 # --- ClaimsStub behavior ---

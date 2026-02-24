@@ -2,13 +2,10 @@
 
 from typing import Any
 
+from rcm_agent.integrations._stub_utils import stub_response
 
-def _stub_response(operation: str) -> dict[str, Any]:
-    return {
-        "stub": True,
-        "operation": operation,
-        "message": "Eligibility backend not implemented; use a real adapter when available.",
-    }
+
+_STUB_MESSAGE = "Eligibility backend not implemented; use a real adapter when available."
 
 
 class EligibilityStub:
@@ -20,7 +17,7 @@ class EligibilityStub:
         member_id: str,
         date_of_service: str,
     ) -> dict[str, Any]:
-        out = _stub_response("check_member_eligibility")
+        out = stub_response("check_member_eligibility", _STUB_MESSAGE)
         out["eligible"] = True
         out["plan_name"] = "Stub Plan"
         out["effective_date"] = "2020-01-01"
@@ -36,7 +33,7 @@ class EligibilityStub:
         member_id: str,
         procedure_codes: list[str],
     ) -> dict[str, Any]:
-        out = _stub_response("verify_benefits")
+        out = stub_response("verify_benefits", _STUB_MESSAGE)
         out["payer"] = payer
         out["member_id"] = member_id
         out["procedures"] = [
