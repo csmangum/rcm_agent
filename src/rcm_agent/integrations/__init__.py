@@ -1,7 +1,7 @@
 """Abstractions for external system integration (eligibility, prior auth, claims).
 
 Implementations can be mock (default), FHIR, EDI, or payer-specific APIs.
-Use a registry or config (e.g. ELIGIBILITY_BACKEND, PRIOR_AUTH_BACKEND) to swap backends.
+Planned: swap backends via registry or config (e.g. ELIGIBILITY_BACKEND, PRIOR_AUTH_BACKEND).
 """
 
 from rcm_agent.integrations.claims_stub import ClaimsStub

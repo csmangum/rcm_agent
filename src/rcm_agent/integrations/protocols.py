@@ -4,9 +4,10 @@ Each protocol defines the contract for one external capability. Mock implementat
 live in adapters; real FHIR/EDI implementations can be added later and swapped via config.
 """
 
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 
+@runtime_checkable
 class EligibilityBackend(Protocol):
     """Interface for payer eligibility and benefits verification.
 
@@ -51,6 +52,7 @@ class EligibilityBackend(Protocol):
         ...
 
 
+@runtime_checkable
 class PriorAuthBackend(Protocol):
     """Interface for prior authorization submit and status polling.
 
@@ -86,6 +88,7 @@ class PriorAuthBackend(Protocol):
         ...
 
 
+@runtime_checkable
 class ClaimsBackend(Protocol):
     """Placeholder interface for claims submission and remittance.
 
