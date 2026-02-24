@@ -148,9 +148,9 @@ def _extract_prior_auth_from_outputs(outputs: list[EncounterOutput]) -> tuple[bo
             auth_num = raw.get("authorization_number") or raw.get("auth_id")
             produced = bool(auth_num)
             if out.status == EncounterStatus.AUTH_APPROVED:
-                return (True, True)
+                return (produced, True)
             if out.status == EncounterStatus.AUTH_DENIED:
-                return (True, False)
+                return (produced, False)
             return (produced, None)
     return (False, None)
 

@@ -341,6 +341,7 @@ def eval_all(examples_dir: str | None, output_dir: str | None) -> None:
     click.echo("Running e2e evaluation...")
     e2e_summary = run_e2e_evaluation(
         examples_dir=examples_dir,
+        golden_path="data/eval/golden.json",
         output_dir=out,
     )
     click.echo(f"  E2E: {e2e_summary.pipeline_success_rate:.1%} success rate")

@@ -52,7 +52,7 @@ def test_extract_prior_auth_from_outputs_approved() -> None:
 
 
 def test_extract_prior_auth_from_outputs_denied() -> None:
-    """Prior auth stage with AUTH_DENIED produces (True, False)."""
+    """Prior auth stage with AUTH_DENIED and no auth number produces (False, False)."""
     out = EncounterOutput(
         encounter_id="ENC-X",
         stage=RcmStage.PRIOR_AUTHORIZATION,
@@ -63,7 +63,7 @@ def test_extract_prior_auth_from_outputs_denied() -> None:
         raw_result={},
     )
     produced, approved = _extract_prior_auth_from_outputs([out])
-    assert produced is True
+    assert produced is False
     assert approved is False
 
 
