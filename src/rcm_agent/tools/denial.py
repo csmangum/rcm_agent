@@ -114,7 +114,10 @@ def assess_appeal_viability(
                 "Prior auth denial; viable for appeal with supporting documentation (auth on file, clinical notes).",
             )
         else:
-            viable, summary = True, "Prior auth denial; appeal viable but gather prior auth approval and clinical documentation."
+            viable, summary = (
+                True,
+                "Prior auth denial; appeal viable but gather prior auth approval and clinical documentation.",
+            )
     # CO-4 / not covered: often medical necessity appeal
     elif "CO-4" in codes_upper:
         viable, summary = True, "Procedure not covered; appeal viable with medical necessity and policy documentation."
