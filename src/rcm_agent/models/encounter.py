@@ -9,7 +9,9 @@ except ImportError:
     # Python < 3.11
     class StrEnum(str, Enum):
         """String enum (enum.StrEnum exists from 3.11 onward)."""
+
         pass
+
 
 from pydantic import BaseModel, Field
 
