@@ -177,3 +177,76 @@ class AppealPacket(TypedDict):
     diagnosis_codes: list[str]
     cover_letter: str
     supporting_documents: list[str]
+
+
+# ---------------------------------------------------------------------------
+# Claims submission tools
+# ---------------------------------------------------------------------------
+
+
+class ClaimLineItem(TypedDict):
+    line_number: int
+    cpt_code: str
+    description: str
+    icd_pointers: list[str]
+    modifiers: list[str]
+    units: int
+    charge_amount: float
+
+
+class CleanClaimData(TypedDict):
+    """837-style claim payload assembled from encounter and coding data."""
+
+    encounter_id: str
+    billing_provider_npi: str
+    payer: str
+    member_id: str
+    patient: dict[str, object]
+    date_of_service: str
+    place_of_service: str
+    icd_codes: list[str]
+    cpt_codes: list[str]
+    modifiers: list[str]
+    line_items: list[ClaimLineItem]
+    total_charges: float
+    authorization_number: str | None
+
+
+class ScrubError(TypedDict):
+    field: str
+    code: str
+    message: str
+
+
+class ScrubResult(TypedDict):
+    clean: bool
+    errors: list[ScrubError]
+    warnings: list[ScrubError]
+    edit_actions: list[str]
+
+
+class SubmitClaimResult(TypedDict):
+    claim_id: str | None
+    status: str
+    submitted_at: str
+    message: str
+    tracking_number: str | None
+
+
+class RemitAdjustment(TypedDict):
+    group_code: str
+    reason_code: str
+    amount: float
+    description: str
+
+
+class RemitStatusResult(TypedDict):
+    claim_id: str | None
+    status: str
+    paid_amount: float | None
+    allowed_amount: float | None
+    patient_responsibility: float | None
+    adjustments: list[RemitAdjustment]
+    check_number: str | None
+    remit_date: str | None
+    message: str | None

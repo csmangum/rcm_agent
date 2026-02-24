@@ -90,24 +90,45 @@ class PriorAuthBackend(Protocol):
 
 @runtime_checkable
 class ClaimsBackend(Protocol):
-    """Placeholder interface for claims submission and remittance.
+    """Interface for claims submission, scrubbing, and remittance retrieval.
 
-    Stub for future coding/claims integration (e.g. submit claim, get remit).
     Real implementations would map to EDI 837/835 or FHIR Claim/ClaimResponse.
     """
 
-    def submit_claim(self, claim_payload: dict[str, Any]) -> dict[str, Any]:
-        """Submit a claim (stub).
+    def scrub_claim(self, claim_payload: dict[str, Any]) -> dict[str, Any]:
+        """Run pre-submission edits and validation on a claim.
 
-        Intended request: encounter/claim data. Intended response: claim_id, status, etc.
-        Implementations may raise or return a stub response until implemented.
+        Returns a dict with at least:
+            - clean: bool (True if no blocking errors)
+            - errors: list[dict] (each with field, code, message)
+            - warnings: list[dict] (each with field, code, message)
+            - edit_actions: list[str] (automated corrections applied)
+        """
+        ...
+
+    def submit_claim(self, claim_payload: dict[str, Any]) -> dict[str, Any]:
+        """Submit a claim to the payer.
+
+        Returns a dict with at least:
+            - claim_id: str
+            - status: str (e.g. "accepted", "rejected")
+            - submitted_at: str (ISO datetime)
+            - message: str
+            - tracking_number: str | None
         """
         ...
 
     def get_remit(self, claim_id: str) -> dict[str, Any]:
-        """Retrieve remittance for a claim (stub).
+        """Retrieve remittance (835-style) for a submitted claim.
 
-        Intended response: payment info, adjustments, CARC/RARC, etc.
-        Implementations may raise or return a stub response until implemented.
+        Returns a dict with at least:
+            - claim_id: str
+            - status: str (e.g. "paid", "denied", "pending")
+            - paid_amount: float | None
+            - allowed_amount: float | None
+            - patient_responsibility: float | None
+            - adjustments: list[dict] (each with group_code, reason_code, amount)
+            - check_number: str | None
+            - remit_date: str | None
         """
         ...

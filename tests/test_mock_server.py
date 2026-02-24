@@ -94,6 +94,67 @@ def test_prior_auth_status_unknown(client: TestClient) -> None:
     assert data.get("decision") is None
 
 
+# --- Claims endpoints ---
+
+_VALID_CLAIM_PAYLOAD = {
+    "encounter_id": "ENC-CLAIM-TEST",
+    "payer": "Aetna",
+    "member_id": "AET123456789",
+    "billing_provider_npi": "1234567890",
+    "date_of_service": "2026-02-10",
+    "icd_codes": ["J06.9"],
+    "cpt_codes": ["99213"],
+    "total_charges": 150.00,
+}
+
+
+def test_claims_scrub_clean(client: TestClient) -> None:
+    r = client.post("/claims/scrub", json=_VALID_CLAIM_PAYLOAD)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["clean"] is True
+    assert data["errors"] == []
+
+
+def test_claims_scrub_missing_fields(client: TestClient) -> None:
+    r = client.post("/claims/scrub", json={"encounter_id": "X", "payer": "P"})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["clean"] is False
+    assert len(data["errors"]) >= 1
+
+
+def test_claims_submit(client: TestClient) -> None:
+    r = client.post("/claims/submit", json=_VALID_CLAIM_PAYLOAD)
+    assert r.status_code == 200
+    data = r.json()
+    assert "claim_id" in data
+    assert data["claim_id"].startswith("CLM-")
+    assert data["status"] == "accepted"
+    assert data["tracking_number"] is not None
+
+
+def test_claims_remit_after_submit(client: TestClient) -> None:
+    sub = client.post("/claims/submit", json=_VALID_CLAIM_PAYLOAD)
+    assert sub.status_code == 200
+    claim_id = sub.json()["claim_id"]
+    r = client.get(f"/claims/remit/{claim_id}")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "paid"
+    assert data["paid_amount"] is not None
+    assert data["allowed_amount"] is not None
+
+
+def test_claims_remit_unknown(client: TestClient) -> None:
+    r = client.get("/claims/remit/CLM-NONEXISTENT")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["claim_id"] == "CLM-NONEXISTENT"
+    assert data["status"] == "not_found"
+    assert data["paid_amount"] is None
+
+
 # --- Real HTTP client path (live server in background) ---
 
 

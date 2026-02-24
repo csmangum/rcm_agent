@@ -1,12 +1,13 @@
 """Registry for external backends. Implementation selected via config (env or future config file)."""
 
 from rcm_agent.config import get_integrations_config
+from rcm_agent.integrations.claims_mock import ClaimsMock
 from rcm_agent.integrations.eligibility_mock import EligibilityMock
-from rcm_agent.integrations.http_clients import EligibilityHttpClient, PriorAuthHttpClient
+from rcm_agent.integrations.http_clients import ClaimsHttpClient, EligibilityHttpClient, PriorAuthHttpClient
 from rcm_agent.integrations.prior_auth_mock import PriorAuthMock
-from rcm_agent.integrations.protocols import EligibilityBackend, PriorAuthBackend
+from rcm_agent.integrations.protocols import ClaimsBackend, EligibilityBackend, PriorAuthBackend
 
-# Map backend name (from ELIGIBILITY_BACKEND / PRIOR_AUTH_BACKEND) to implementation class.
+# Map backend name to implementation class.
 # "http" uses mock_server_url from config; add "fhir", "edi", etc. when adapters exist.
 _ELIGIBILITY_BACKENDS: dict[str, type[EligibilityBackend]] = {
     "mock": EligibilityMock,
@@ -14,16 +15,21 @@ _ELIGIBILITY_BACKENDS: dict[str, type[EligibilityBackend]] = {
 _PRIOR_AUTH_BACKENDS: dict[str, type[PriorAuthBackend]] = {
     "mock": PriorAuthMock,
 }
+_CLAIMS_BACKENDS: dict[str, type[ClaimsBackend]] = {
+    "mock": ClaimsMock,
+}
 
 _eligibility_backend: EligibilityBackend | None = None
 _prior_auth_backend: PriorAuthBackend | None = None
+_claims_backend: ClaimsBackend | None = None
 
 
 def reset_integration_backends() -> None:
     """Clear cached backends (for tests). Next get_* call will read config again."""
-    global _eligibility_backend, _prior_auth_backend
+    global _eligibility_backend, _prior_auth_backend, _claims_backend
     _eligibility_backend = None
     _prior_auth_backend = None
+    _claims_backend = None
 
 
 def get_eligibility_backend() -> EligibilityBackend:
@@ -66,3 +72,24 @@ def get_prior_auth_backend() -> PriorAuthBackend:
                 )
             _prior_auth_backend = impl()
     return _prior_auth_backend
+
+
+def get_claims_backend() -> ClaimsBackend:
+    """Return the configured claims backend (default: mock)."""
+    global _claims_backend
+    if _claims_backend is None:
+        cfg = get_integrations_config()
+        name = cfg["claims"]
+        if name == "http":
+            base_url = cfg.get("mock_server_url", "http://localhost:8000")
+            _claims_backend = ClaimsHttpClient(base_url)
+        else:
+            impl = _CLAIMS_BACKENDS.get(name)
+            if impl is None:
+                raise ValueError(
+                    f"Unknown CLAIMS_BACKEND={name!r}. "
+                    "Supported: mock, http. "
+                    "Set CLAIMS_BACKEND=mock or add the adapter to the registry."
+                )
+            _claims_backend = impl()
+    return _claims_backend
