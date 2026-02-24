@@ -38,6 +38,18 @@ def get_escalation_config() -> EscalationConfig:
 
 DEFAULT_AUTH_REQUIRED_CPT = {"73721", "70450", "72148", "29881"}
 
+CPT_CHARGE_AMOUNTS: dict[str, float] = {
+    "99213": 150.00,
+    "99223": 450.00,
+    "73721": 800.00,
+    "70450": 400.00,
+    "72148": 600.00,
+    "29881": 3500.00,
+    "27130": 25000.00,
+    "99285": 650.00,
+}
+DEFAULT_CHARGE = 200.00
+
 
 def get_auth_required_procedures() -> set[str]:
     """List of CPT codes requiring prior authorization (from env or default)."""

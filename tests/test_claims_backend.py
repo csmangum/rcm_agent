@@ -129,4 +129,4 @@ def test_claims_stub_get_remit():
     result = stub.get_remit("CLM-999")
     assert result["stub"] is True
     assert result["claim_id"] == "CLM-999"
-    assert result["payment"] is None
+    assert result["paid_amount"] is None

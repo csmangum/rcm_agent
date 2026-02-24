@@ -22,11 +22,19 @@ class ClaimsStub:
         out = stub_response("submit_claim", _STUB_MESSAGE)
         out["claim_id"] = None
         out["status"] = "stub"
+        out["submitted_at"] = ""
+        out["message"] = _STUB_MESSAGE
+        out["tracking_number"] = None
         return out
 
     def get_remit(self, claim_id: str) -> dict[str, Any]:
         out = stub_response("get_remit", _STUB_MESSAGE)
         out["claim_id"] = claim_id
-        out["payment"] = None
+        out["status"] = "stub"
+        out["paid_amount"] = None
+        out["allowed_amount"] = None
+        out["patient_responsibility"] = None
         out["adjustments"] = []
+        out["check_number"] = None
+        out["remit_date"] = None
         return out

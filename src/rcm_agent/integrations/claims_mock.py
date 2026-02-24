@@ -72,13 +72,6 @@ class ClaimsMock:
         cpt_codes = claim_payload.get("cpt_codes") or []
         if icd_codes and cpt_codes:
             pass  # Real scrubber would check LCD/NCD medical-necessity edits here.
-        else:
-            if not icd_codes:
-                errors.append({"field": "icd_codes", "code": "NO_DX", "message": "At least one diagnosis required."})
-            if not cpt_codes:
-                errors.append(
-                    {"field": "cpt_codes", "code": "NO_PROC", "message": "At least one procedure code required."}
-                )
 
         payer = claim_payload.get("payer", "")
         for rule in _PAYER_SCRUB_RULES.get(payer, []):

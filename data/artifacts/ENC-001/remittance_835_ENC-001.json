@@ -1,7 +1,7 @@
 {
   "encounter_id": "ENC-001",
-  "claim_id": "CLM-ABA64059",
-  "tracking_number": "TRK-9CEF71",
+  "claim_id": "CLM-DA8176C4",
+  "tracking_number": "TRK-C8750F",
   "payer": "Aetna",
   "member_id": "AET123456789",
   "date_of_service": "2026-02-10",
@@ -23,8 +23,8 @@
       "description": "Coinsurance amount (20%)."
     }
   ],
-  "check_number": "CHK-9F4BC4",
-  "remit_date": "2026-02-24T02:42:09Z",
+  "check_number": "CHK-953F12",
+  "remit_date": "2026-02-24T03:06:38Z",
   "status": "paid",
   "line_items": [
     {

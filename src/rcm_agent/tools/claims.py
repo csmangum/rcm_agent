@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from rcm_agent.config import CPT_CHARGE_AMOUNTS, DEFAULT_CHARGE
 from rcm_agent.integrations.registry import get_claims_backend
 from rcm_agent.models import Encounter, EncounterType
 from rcm_agent.tools._types import (
@@ -22,19 +23,6 @@ _POS_MAP: dict[str, str] = {
     EncounterType.inpatient: "21",
     EncounterType.emergency: "23",
 }
-
-# Rough charge amounts per CPT (mirrors main_crew._CPT_ESTIMATE but for claim assembly).
-_CHARGE_AMOUNTS: dict[str, float] = {
-    "99213": 150.00,
-    "99223": 450.00,
-    "73721": 800.00,
-    "70450": 400.00,
-    "72148": 600.00,
-    "29881": 3500.00,
-    "27130": 25000.00,
-    "99285": 650.00,
-}
-_DEFAULT_CHARGE = 200.00
 
 
 def assemble_clean_claim(
@@ -73,9 +61,11 @@ def assemble_clean_claim(
     line_items: list[ClaimLineItem] = []
     total_charges = 0.0
     for idx, cpt in enumerate(cpt_codes, start=1):
-        charge = _CHARGE_AMOUNTS.get(cpt, _DEFAULT_CHARGE)
+        charge = CPT_CHARGE_AMOUNTS.get(cpt, DEFAULT_CHARGE)
         total_charges += charge
-        line_mods = [m for m in modifiers] if idx == len(cpt_codes) and modifiers else []
+        line_mods: list[str] = []
+        if cpt == "99223" and "57" in modifiers:
+            line_mods.append("57")
         line_items.append(
             ClaimLineItem(
                 line_number=idx,

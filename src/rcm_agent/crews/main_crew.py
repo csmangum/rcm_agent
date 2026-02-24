@@ -1,6 +1,6 @@
 """Main crew orchestration: route -> escalation gate -> crew dispatch."""
 
-from rcm_agent.config import get_auth_required_procedures
+from rcm_agent.config import CPT_CHARGE_AMOUNTS, get_auth_required_procedures
 from rcm_agent.crews.claims_submission_crew import run_claims_submission_crew
 from rcm_agent.crews.coding_crew import run_coding_crew
 from rcm_agent.crews.denial_appeal_crew import run_denial_appeal_crew
@@ -16,17 +16,6 @@ from rcm_agent.models import (
 )
 from rcm_agent.tools.logic import check_escalation
 
-# Rough estimated charges for common CPT codes (for high-value escalation check)
-_CPT_ESTIMATE: dict[str, float] = {
-    "99213": 150.0,
-    "99223": 450.0,
-    "73721": 800.0,
-    "70450": 400.0,
-    "72148": 600.0,
-    "29881": 3500.0,
-    "27130": 25000.0,  # total hip arthroplasty
-    "99285": 650.0,
-}
 _DEFAULT_ESTIMATE = 500.0
 
 
@@ -34,7 +23,7 @@ def estimate_charges(encounter: Encounter) -> float:
     """Simple charge estimate from procedure codes (for escalation threshold check)."""
     total = 0.0
     for p in encounter.procedures:
-        total += _CPT_ESTIMATE.get(p.code, _DEFAULT_ESTIMATE)
+        total += CPT_CHARGE_AMOUNTS.get(p.code, _DEFAULT_ESTIMATE)
     return total if total > 0 else _DEFAULT_ESTIMATE
 
 
