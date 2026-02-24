@@ -1,0 +1,26 @@
+APPEAL LETTER – Claim Denial
+
+Payer: Cigna
+Member ID: CIG444333222
+Encounter ID: ENC-004
+Date of Service: 2026-01-15
+
+DENIAL REASON CODES: CO-4 (Procedure/product not covered by payer), PR-96 (Prior authorization not on file)
+CLASSIFICATION: administrative
+APPEAL VIABILITY: Viable
+Prior auth denial; viable for appeal with supporting documentation (auth on file, clinical notes).
+
+SERVICES REQUESTED:
+Procedure codes: 29881
+Descriptions: Arthroscopy, knee, surgical; with meniscectomy
+Diagnosis codes: M23.211
+
+CLINICAL JUSTIFICATION:
+Claim previously submitted and denied (CO-4: procedure not covered; PR-96: prior auth not on file). Patient had auth on file per our records. Need appeal with clinical documentation.
+
+POLICY / COVERAGE REFERENCES:
+  - Knee arthroscopy with meniscectomy requires prior auth. Include operative plan.
+
+We request reconsideration of the denial and approval of the above services based on the clinical documentation and policy references provided. Supporting documents are attached.
+
+Please contact our office with any questions.

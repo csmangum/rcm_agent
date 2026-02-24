@@ -316,6 +316,114 @@ class EncounterRepository:
         finally:
             conn.close()
 
+    def save_denial_event(
+        self,
+        encounter_id: str,
+        reason_codes: list[str],
+        denial_type: str,
+        appeal_viable: bool,
+        *,
+        claim_id: str | None = None,
+        payer: str | None = None,
+    ) -> None:
+        """Insert a denial event for analytics. Call only after the encounter has been saved; denial_events.encounter_id references encounters(encounter_id)."""
+        conn = self._conn()
+        try:
+            conn.execute(
+                """
+                INSERT INTO denial_events
+                (encounter_id, claim_id, payer, reason_codes, denial_type, appeal_viable, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    encounter_id,
+                    claim_id,
+                    payer,
+                    json.dumps(reason_codes),
+                    denial_type,
+                    1 if appeal_viable else 0,
+                    _now_utc(),
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def get_denial_events(self, encounter_id: str) -> list[dict]:
+        """Return denial events for an encounter, newest first."""
+        conn = self._conn()
+        try:
+            cur = conn.execute(
+                """
+                SELECT id, encounter_id, claim_id, payer, reason_codes, denial_type, appeal_viable, created_at
+                FROM denial_events
+                WHERE encounter_id = ?
+                ORDER BY id DESC
+                """,
+                (encounter_id,),
+            )
+            rows = cur.fetchall()
+            return [
+                {
+                    "id": r[0],
+                    "encounter_id": r[1],
+                    "claim_id": r[2],
+                    "payer": r[3],
+                    "reason_codes": json.loads(r[4]) if r[4] else [],
+                    "denial_type": r[5],
+                    "appeal_viable": bool(r[6]),
+                    "created_at": r[7],
+                }
+                for r in rows
+            ]
+        finally:
+            conn.close()
+
+    def get_denial_stats(self) -> dict:
+        """Aggregate denial analytics: by reason code, denial type, payer."""
+        conn = self._conn()
+        try:
+            cur = conn.execute(
+                "SELECT reason_codes, denial_type, payer FROM denial_events"
+            )
+            rows = cur.fetchall()
+
+            by_reason_code: dict[str, int] = {}
+            by_denial_type: dict[str, int] = {}
+            by_payer: dict[str, int] = {}
+            total = 0
+            appeal_viable_count = 0
+
+            cur2 = conn.execute(
+                "SELECT COUNT(*), SUM(appeal_viable) FROM denial_events"
+            )
+            row2 = cur2.fetchone()
+            if row2:
+                total = row2[0] or 0
+                appeal_viable_count = row2[1] or 0
+
+            for reason_codes_json, denial_type, payer in rows:
+                if denial_type:
+                    by_denial_type[denial_type] = by_denial_type.get(denial_type, 0) + 1
+                if payer:
+                    by_payer[payer] = by_payer.get(payer, 0) + 1
+                try:
+                    codes = json.loads(reason_codes_json) if reason_codes_json else []
+                    for c in codes:
+                        by_reason_code[c] = by_reason_code.get(c, 0) + 1
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+            return {
+                "total": total,
+                "appeal_viable_count": appeal_viable_count,
+                "by_reason_code": by_reason_code,
+                "by_denial_type": by_denial_type,
+                "by_payer": by_payer,
+            }
+        finally:
+            conn.close()
+
     def get_metrics(self) -> dict:
         """Aggregate counts by status and stage for metrics command."""
         conn = self._conn()
@@ -342,6 +450,8 @@ class EncounterRepository:
                 EncounterStatus.AUTH_APPROVED.value, 0
             )
 
+            denial_stats = self.get_denial_stats()
+
             return {
                 "total": total,
                 "by_status": by_status,
@@ -350,6 +460,7 @@ class EncounterRepository:
                 "escalation_pct": (escalated / total * 100) if total else 0.0,
                 "clean_count": clean,
                 "clean_rate_pct": (clean / total * 100) if total else 0.0,
+                "denial_stats": denial_stats,
             }
         finally:
             conn.close()

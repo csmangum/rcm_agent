@@ -42,11 +42,41 @@ def test_router_enc_003_inpatient_surgery(examples_dir: Path) -> None:
 
 
 def test_router_enc_004_denial(examples_dir: Path) -> None:
-    """ENC-004 (denial scenario) -> DENIAL_APPEAL."""
+    """ENC-004 (denial scenario with denial_info) -> DENIAL_APPEAL (structured denial_info)."""
     encounter = _load_encounter(examples_dir, "encounter_004_denial_scenario.json")
     result = classify_encounter(encounter)
     assert result.stage == RcmStage.DENIAL_APPEAL
-    assert "denial" in result.reasoning.lower() or "appeal" in result.reasoning.lower()
+    assert "denial" in result.reasoning.lower() or "appeal" in result.reasoning.lower() or "denial_info" in result.reasoning.lower()
+
+
+def test_router_denial_info_routes_to_denial_appeal(examples_dir: Path) -> None:
+    """Encounter with denial_info but no denial keywords in notes still routes to DENIAL_APPEAL."""
+    from rcm_agent.models import DenialInfo
+    encounter = _load_encounter(examples_dir, "encounter_001_routine_visit.json")
+    encounter = encounter.model_copy(
+        update={
+            "clinical_notes": "Routine visit, no denial mentioned.",
+            "denial_info": DenialInfo(claim_id="CLM-X", reason_codes=["PR-96"], denial_date="2026-01-01"),
+        }
+    )
+    result = classify_encounter(encounter)
+    assert result.stage == RcmStage.DENIAL_APPEAL
+    assert "denial_info" in result.reasoning.lower()
+
+
+def test_router_denial_info_empty_reason_codes_routes_to_denial_appeal(examples_dir: Path) -> None:
+    """Encounter with denial_info and empty reason_codes (no denial keywords in notes) still routes to DENIAL_APPEAL."""
+    from rcm_agent.models import DenialInfo
+    encounter = _load_encounter(examples_dir, "encounter_001_routine_visit.json")
+    encounter = encounter.model_copy(
+        update={
+            "clinical_notes": "Routine visit, no denial or appeal mentioned.",
+            "denial_info": DenialInfo(claim_id="CLM-X", reason_codes=[], denial_date=None),
+        }
+    )
+    result = classify_encounter(encounter)
+    assert result.stage == RcmStage.DENIAL_APPEAL
+    assert "denial_info" in result.reasoning.lower()
 
 
 def test_router_enc_005_eligibility(examples_dir: Path) -> None:
@@ -102,14 +132,16 @@ def test_process_encounter_enc_002_prior_auth(examples_dir: Path) -> None:
     assert output.raw_result.get("router_stage") == "PRIOR_AUTHORIZATION"
 
 
-def test_process_encounter_enc_004_denial_stub(examples_dir: Path) -> None:
-    """Process ENC-004: router -> DENIAL_APPEAL -> stub crew returns NEEDS_REVIEW."""
+def test_process_encounter_enc_004_denial_crew(examples_dir: Path) -> None:
+    """Process ENC-004: router -> DENIAL_APPEAL -> denial/appeal crew returns analysis and artifacts."""
     encounter = _load_encounter(examples_dir, "encounter_004_denial_scenario.json")
     output = process_encounter(encounter)
     assert output.encounter_id == "ENC-004"
     assert output.stage == RcmStage.DENIAL_APPEAL
-    assert output.status.value == "NEEDS_REVIEW"
-    assert output.raw_result.get("stub") is True
+    assert output.status.value in ("NEEDS_REVIEW", "CLAIM_DENIED")
+    assert output.raw_result.get("stub") is not True
+    assert "reason_codes" in output.raw_result
+    assert "denial_type" in output.raw_result
 
 
 def test_dispatch_to_crew_eligibility(encounter_005: Encounter) -> None:
@@ -140,11 +172,13 @@ def test_dispatch_to_crew_claims_submission_stub(encounter_001: Encounter) -> No
     assert output.raw_result.get("stub") is True
 
 
-def test_dispatch_to_crew_denial_appeal_stub(encounter_004: Encounter) -> None:
-    """dispatch_to_crew with DENIAL_APPEAL uses stub."""
+def test_dispatch_to_crew_denial_appeal_crew(encounter_004: Encounter) -> None:
+    """dispatch_to_crew with DENIAL_APPEAL runs denial/appeal crew."""
     output = dispatch_to_crew(encounter_004, RcmStage.DENIAL_APPEAL)
     assert output.stage == RcmStage.DENIAL_APPEAL
-    assert output.raw_result.get("stub") is True
+    assert output.raw_result.get("stub") is not True
+    assert "reason_codes" in output.raw_result
+    assert "appeal_viable" in output.raw_result
 
 
 def test_estimate_charges_known_cpt(encounter_002: Encounter) -> None:

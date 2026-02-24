@@ -1,0 +1,16 @@
+{
+  "encounter_id": "ENC-006",
+  "patient": {"age": 52, "gender": "F", "zip": "90210"},
+  "insurance": {"payer": "UnitedHealthcare", "member_id": "UHC777888", "plan_type": "PPO"},
+  "date": "2026-02-01",
+  "type": "outpatient_procedure",
+  "procedures": [{"code": "70450", "description": "CT head without contrast"}],
+  "diagnoses": [{"code": "R51", "description": "Headache"}],
+  "clinical_notes": "Claim denied. CO-4: procedure not covered under plan. Appeal with medical necessity documentation.",
+  "documents": ["denial_letter.pdf", "imaging_order.pdf"],
+  "denial_info": {
+    "claim_id": "CLM-006",
+    "reason_codes": ["CO-4"],
+    "denial_date": "2026-01-28"
+  }
+}
