@@ -29,17 +29,15 @@ def run_coding_crew(encounter: Encounter) -> EncounterOutput:
         encounter.type,
         existing_codes=existing_codes,
     )
-    raw_icd = suggestion.get("icd_codes") or []
-    raw_cpt = suggestion.get("cpt_codes") or []
+    raw_icd = suggestion["icd_codes"] or []
+    raw_cpt = suggestion["cpt_codes"] or []
     icd_codes = [c["code"] for c in raw_icd if isinstance(c, dict) and "code" in c] or existing_icd
     cpt_codes = [c["code"] for c in raw_cpt if isinstance(c, dict) and "code" in c] or existing_cpt
 
     guidelines_backend = get_coding_guidelines_backend()
     actions.append("search_coding_guidelines")
     coding_guidelines_query = f"CPT ICD-10 coding guidelines {encounter.type.value}"
-    coding_guidelines_snippets = search_coding_guidelines(
-        coding_guidelines_query, backend=guidelines_backend or "mock"
-    )
+    coding_guidelines_snippets = search_coding_guidelines(coding_guidelines_query, backend=guidelines_backend or "mock")
 
     actions.append("validate_code_combinations")
     validation = validate_code_combinations(icd_codes, cpt_codes)
@@ -50,13 +48,11 @@ def run_coding_crew(encounter: Encounter) -> EncounterOutput:
     actions.append("calculate_expected_reimbursement")
     reimbursement = calculate_expected_reimbursement(cpt_codes, encounter.insurance.payer)
 
-    confidence = suggestion.get("confidence", 0.5)
-    has_validation_issues = not validation.get("valid", True)
-    has_missing_charge_flags = bool(missing.get("missing_charge_flags"))
+    confidence = suggestion["confidence"]
+    has_validation_issues = not validation["valid"]
+    has_missing_charge_flags = bool(missing["missing_charge_flags"])
     status = (
-        EncounterStatus.NEEDS_REVIEW
-        if has_validation_issues or has_missing_charge_flags
-        else EncounterStatus.CODED
+        EncounterStatus.NEEDS_REVIEW if has_validation_issues or has_missing_charge_flags else EncounterStatus.CODED
     )
     raw_result = {
         "suggested_codes": suggestion,

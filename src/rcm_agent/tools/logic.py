@@ -20,9 +20,7 @@ def _is_oncology_icd(code: str) -> bool:
         if code[1:3] in ("7A", "7B"):
             return True
     # D00-D09: in situ neoplasms
-    if code[0] == "D" and code[1] == "0" and code[2] in "0123456789":
-        return True
-    return False
+    return code[0] == "D" and code[1] == "0" and code[2] in "0123456789"
 
 
 def _notes_suggest_oncology(clinical_notes: str | None) -> bool:
@@ -47,18 +45,14 @@ def check_escalation(
     reasons: list[str] = []
 
     # 1. Low confidence
-    if confidence is not None:
-        if confidence < config.confidence_threshold:
-            reasons.append(
-                f"Confidence score {confidence:.2f} below threshold {config.confidence_threshold}"
-            )
+    if confidence is not None and confidence < config.confidence_threshold:
+        reasons.append(f"Confidence score {confidence:.2f} below threshold {config.confidence_threshold}")
 
     # 2. High dollar value
-    if estimated_charges is not None:
-        if estimated_charges > config.high_value_threshold:
-            reasons.append(
-                f"Estimated charges ${estimated_charges:,.0f} exceed threshold ${config.high_value_threshold:,.0f}"
-            )
+    if estimated_charges is not None and estimated_charges > config.high_value_threshold:
+        reasons.append(
+            f"Estimated charges ${estimated_charges:,.0f} exceed threshold ${config.high_value_threshold:,.0f}"
+        )
 
     # 3. Oncology flag
     if config.oncology_flag:

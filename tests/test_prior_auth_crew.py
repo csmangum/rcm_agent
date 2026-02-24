@@ -1,9 +1,7 @@
 """Integration tests for prior authorization crew."""
 
-import pytest
-
-from rcm_agent.models import EncounterStatus, RcmStage
 from rcm_agent.crews.prior_auth_crew import run_prior_auth_crew
+from rcm_agent.models import EncounterStatus, RcmStage
 
 
 def test_prior_auth_crew_enc_002_approved(encounter_002):
@@ -20,7 +18,8 @@ def test_prior_auth_crew_enc_002_approved(encounter_002):
 
 def test_prior_auth_crew_no_procedures_completes():
     """Prior auth crew with no procedures still completes (empty procedure_codes in packet)."""
-    from rcm_agent.models import Encounter, Patient, Insurance, DiagnosisCode, EncounterType
+    from rcm_agent.models import DiagnosisCode, Encounter, EncounterType, Insurance, Patient
+
     encounter = Encounter(
         encounter_id="ENC-NOPROC",
         patient=Patient(age=50, gender="F", zip="10001"),
@@ -50,4 +49,3 @@ def test_prior_auth_crew_uses_injected_policy_backend(encounter_002, monkeypatch
     policy_refs = output.raw_result.get("auth_packet", {}).get("policy_references", {})
     assert "73721" in policy_refs
     assert policy_refs["73721"] == [custom_snippet]
-

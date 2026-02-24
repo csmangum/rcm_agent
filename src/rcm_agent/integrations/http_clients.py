@@ -8,8 +8,6 @@ from typing import Any
 
 import httpx
 
-from rcm_agent.integrations.protocols import EligibilityBackend, PriorAuthBackend
-
 
 class EligibilityHttpClient:
     """EligibilityBackend that calls /eligibility/check and /eligibility/verify over HTTP."""
@@ -26,7 +24,8 @@ class EligibilityHttpClient:
             with httpx.Client(timeout=30.0) as c:
                 resp = c.post(url, json=body)
         resp.raise_for_status()
-        return resp.json()
+        result: dict[str, Any] = resp.json()
+        return result
 
     def check_member_eligibility(
         self,
@@ -66,7 +65,8 @@ class PriorAuthHttpClient:
             with httpx.Client(timeout=30.0) as c:
                 resp = c.get(url)
         resp.raise_for_status()
-        return resp.json()
+        result: dict[str, Any] = resp.json()
+        return result
 
     def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
         url = f"{self._base}{path}"
@@ -76,7 +76,8 @@ class PriorAuthHttpClient:
             with httpx.Client(timeout=30.0) as c:
                 resp = c.post(url, json=body)
         resp.raise_for_status()
-        return resp.json()
+        result: dict[str, Any] = resp.json()
+        return result
 
     def submit_auth_request(self, auth_packet: dict[str, Any]) -> dict[str, Any]:
         return self._post("/prior-auth/submit", auth_packet)

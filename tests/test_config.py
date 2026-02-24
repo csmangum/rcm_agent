@@ -67,7 +67,7 @@ def test_get_payer_config_structure() -> None:
     assert "UnitedHealthcare" in config
     assert "Aetna" in config
     assert "Cigna" in config
-    for payer, rules in config.items():
+    for _payer, rules in config.items():
         assert isinstance(rules, dict)
         assert "auth_required_cpt_override" in rules
         assert "common_denial_codes" in rules

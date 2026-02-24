@@ -1,7 +1,6 @@
 """Denial analysis tools: parse reason codes, classify denial type, assess appeal viability."""
 
 import re
-from typing import Any
 
 from rcm_agent.models import Encounter
 
@@ -83,7 +82,10 @@ def assess_appeal_viability(
     if any(c in codes_upper for c in ("PR-96", "PR-1", "CO-197")):
         has_docs = bool(encounter.documents) or bool((encounter.clinical_notes or "").strip())
         if has_docs:
-            return True, "Prior auth denial; viable for appeal with supporting documentation (auth on file, clinical notes)."
+            return (
+                True,
+                "Prior auth denial; viable for appeal with supporting documentation (auth on file, clinical notes).",
+            )
         return True, "Prior auth denial; appeal viable but gather prior auth approval and clinical documentation."
 
     # CO-4 / not covered: often medical necessity appeal

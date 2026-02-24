@@ -46,12 +46,17 @@ def test_router_enc_004_denial(examples_dir: Path) -> None:
     encounter = _load_encounter(examples_dir, "encounter_004_denial_scenario.json")
     result = classify_encounter(encounter)
     assert result.stage == RcmStage.DENIAL_APPEAL
-    assert "denial" in result.reasoning.lower() or "appeal" in result.reasoning.lower() or "denial_info" in result.reasoning.lower()
+    assert (
+        "denial" in result.reasoning.lower()
+        or "appeal" in result.reasoning.lower()
+        or "denial_info" in result.reasoning.lower()
+    )
 
 
 def test_router_denial_info_routes_to_denial_appeal(examples_dir: Path) -> None:
     """Encounter with denial_info but no denial keywords in notes still routes to DENIAL_APPEAL."""
     from rcm_agent.models import DenialInfo
+
     encounter = _load_encounter(examples_dir, "encounter_001_routine_visit.json")
     encounter = encounter.model_copy(
         update={
@@ -67,6 +72,7 @@ def test_router_denial_info_routes_to_denial_appeal(examples_dir: Path) -> None:
 def test_router_denial_info_empty_reason_codes_routes_to_denial_appeal(examples_dir: Path) -> None:
     """Encounter with denial_info and empty reason_codes (no denial keywords in notes) still routes to DENIAL_APPEAL."""
     from rcm_agent.models import DenialInfo
+
     encounter = _load_encounter(examples_dir, "encounter_001_routine_visit.json")
     encounter = encounter.model_copy(
         update={
@@ -106,9 +112,7 @@ def test_process_encounter_enc_001_no_escalation(examples_dir: Path) -> None:
     assert "router_confidence" in output.raw_result
 
 
-def test_process_encounter_enc_003_high_value_escalation(
-    examples_dir: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_process_encounter_enc_003_high_value_escalation(examples_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """ENC-003 (hip replacement) has high estimated charges -> escalation."""
     monkeypatch.setenv("ESCALATION_HIGH_VALUE_THRESHOLD", "5000")
     monkeypatch.setenv("ESCALATION_ONCOLOGY_FLAG", "false")
@@ -119,8 +123,7 @@ def test_process_encounter_enc_003_high_value_escalation(
     assert output.status.value == "NEEDS_REVIEW"
     assert "escalation_reasons" in output.raw_result
     assert any(
-        "charges" in r.lower() and "5000" in r.replace(",", "")
-        for r in output.raw_result.get("escalation_reasons", [])
+        "charges" in r.lower() and "5000" in r.replace(",", "") for r in output.raw_result.get("escalation_reasons", [])
     )
 
 
@@ -194,8 +197,7 @@ def test_estimate_charges_unknown_cpt(examples_dir: Path) -> None:
     assert total == 150.0  # 99213 is in map
     # Encounter with unknown code would get _DEFAULT_ESTIMATE (500.0)
     from rcm_agent.models import ProcedureCode
-    enc_unknown = encounter.model_copy(
-        update={"procedures": [ProcedureCode(code="99999", description="Unknown")]}
-    )
+
+    enc_unknown = encounter.model_copy(update={"procedures": [ProcedureCode(code="99999", description="Unknown")]})
     total_unknown = estimate_charges(enc_unknown)
     assert total_unknown == 500.0

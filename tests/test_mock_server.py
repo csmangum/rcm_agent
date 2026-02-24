@@ -99,11 +99,13 @@ def test_prior_auth_status_unknown(client: TestClient) -> None:
 
 def _run_server() -> None:
     import uvicorn
+
     uvicorn.run(app, host="127.0.0.1", port=_LIVE_PORT, log_level="warning")
 
 
 def _wait_for_server(base_url: str, timeout: float = 5.0) -> bool:
     import urllib.request
+
     url = f"{base_url}/health"
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:

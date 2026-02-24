@@ -3,8 +3,6 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from rcm_agent.crews.denial_appeal_crew import run_denial_appeal_crew
 from rcm_agent.models import DenialInfo, Encounter, EncounterStatus, RcmStage
 

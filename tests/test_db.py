@@ -1,6 +1,5 @@
 """Unit tests for database schema and repository."""
 
-import json
 from pathlib import Path
 
 import pytest
@@ -36,10 +35,9 @@ def test_init_db_creates_tables(tmp_path: Path) -> None:
     db_path = str(tmp_path / "test.db")
     init_db(db_path)
     import sqlite3
+
     conn = sqlite3.connect(db_path)
-    cur = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-    )
+    cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
     tables = [row[0] for row in cur.fetchall()]
     conn.close()
     assert "encounters" in tables
@@ -119,6 +117,7 @@ def test_save_workflow_run(tmp_path: Path, sample_encounter: Encounter) -> None:
     )
     # No getter in repo; just ensure no exception and table has row
     import sqlite3
+
     conn = sqlite3.connect(db_path)
     cur = conn.execute("SELECT COUNT(*) FROM workflow_runs WHERE encounter_id = ?", ("ENC-DB-001",))
     assert cur.fetchone()[0] == 1
@@ -145,6 +144,7 @@ def test_save_prior_auth(tmp_path: Path, sample_encounter: Encounter) -> None:
     )
     repo.save_prior_auth(auth)
     import sqlite3
+
     conn = sqlite3.connect(db_path)
     cur = conn.execute("SELECT auth_id, status FROM prior_auth_requests WHERE auth_id = ?", ("AUTH-1",))
     row = cur.fetchone()
@@ -173,6 +173,7 @@ def test_save_claim_submission(tmp_path: Path, sample_encounter: Encounter) -> N
     )
     repo.save_claim_submission(claim)
     import sqlite3
+
     conn = sqlite3.connect(db_path)
     cur = conn.execute("SELECT claim_id, total_charges FROM claim_submissions WHERE claim_id = ?", ("CLM-1",))
     row = cur.fetchone()
