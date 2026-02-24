@@ -138,12 +138,12 @@ def test_get_integrations_config_from_env(monkeypatch):
     assert cfg["eligibility"] == "fhir"
 
 
-def test_registry_returns_mock_by_default():
+def test_registry_returns_mock_by_default(monkeypatch):
     """Default (no env) yields EligibilityMock and PriorAuthMock."""
     reset_integration_backends()
     # Ensure no env override
-    os.environ.pop("ELIGIBILITY_BACKEND", None)
-    os.environ.pop("PRIOR_AUTH_BACKEND", None)
+    monkeypatch.delenv("ELIGIBILITY_BACKEND", raising=False)
+    monkeypatch.delenv("PRIOR_AUTH_BACKEND", raising=False)
     elig = get_eligibility_backend()
     pa = get_prior_auth_backend()
     assert isinstance(elig, EligibilityMock)

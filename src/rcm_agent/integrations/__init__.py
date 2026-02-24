@@ -22,6 +22,7 @@ from rcm_agent.integrations.registry import (
 
 __all__ = [
     "ClaimsBackend",
+    "ClaimsStub",
     "EligibilityBackend",
     "EligibilityMock",
     "EligibilityStub",
