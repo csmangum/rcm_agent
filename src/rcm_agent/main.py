@@ -153,6 +153,25 @@ def metrics(ctx: click.Context) -> None:
 
 
 @main.command()
+@click.option(
+    "--host",
+    default="127.0.0.1",
+    help="Bind host (default: 127.0.0.1).",
+)
+@click.option(
+    "--port",
+    default=8000,
+    type=int,
+    help="Bind port (default: 8000).",
+)
+def serve_mock(host: str, port: int) -> None:
+    """Run the FastAPI mock server for eligibility and prior-auth (HTTP)."""
+    import uvicorn
+    from rcm_agent.integrations.mock_server import app
+    uvicorn.run(app, host=host, port=port)
+
+
+@main.command()
 @click.pass_context
 def denial_stats(ctx: click.Context) -> None:
     """Show denial analytics (reason codes, denial type, payer)."""

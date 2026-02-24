@@ -66,6 +66,18 @@ def get_rag_config() -> dict[str, Any]:
     return {"backend": backend, "chroma_dir": chroma_dir}
 
 
+def get_integrations_config() -> dict[str, Any]:
+    """Eligibility and prior-auth backend selection; optional base URL for 'http' backend."""
+    eligibility = (os.environ.get("ELIGIBILITY_BACKEND") or "mock").strip().lower()
+    prior_auth = (os.environ.get("PRIOR_AUTH_BACKEND") or "mock").strip().lower()
+    mock_server_url = (os.environ.get("RCM_MOCK_SERVER_URL") or "http://localhost:8000").strip().rstrip("/")
+    return {
+        "eligibility": eligibility,
+        "prior_auth": prior_auth,
+        "mock_server_url": mock_server_url,
+    }
+
+
 def get_payer_config() -> dict[str, dict[str, Any]]:
     """Payer-specific rules (hardcoded for MVP; externalize later)."""
     return {
