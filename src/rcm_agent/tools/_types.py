@@ -26,9 +26,9 @@ class EligibilityResult(TypedDict):
 class ProcedureBenefit(TypedDict):
     procedure_code: str
     covered: bool
-    copay: float
-    coinsurance_pct: float
-    deductible_remaining: float
+    copay: float | None
+    coinsurance_pct: float | None
+    deductible_remaining: float | None
 
 
 class BenefitsResult(TypedDict):
