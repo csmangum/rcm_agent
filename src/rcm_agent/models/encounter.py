@@ -3,16 +3,6 @@
 from enum import Enum
 from typing import Any, TypedDict
 
-try:
-    from enum import StrEnum
-except ImportError:
-    # Python < 3.11
-    class StrEnum(str, Enum):
-        """String enum (enum.StrEnum exists from 3.11 onward)."""
-
-        pass
-
-
 from pydantic import BaseModel, Field
 
 
@@ -23,7 +13,7 @@ class PipelineContext(TypedDict, total=False):
     authorization_number: str
 
 
-class RcmStage(StrEnum):
+class RcmStage(str, Enum):
     """RCM workflow stage (replaces ClaimType)."""
 
     INTAKE = "INTAKE"
@@ -35,7 +25,7 @@ class RcmStage(StrEnum):
     HUMAN_ESCALATION = "HUMAN_ESCALATION"
 
 
-class EncounterStatus(StrEnum):
+class EncounterStatus(str, Enum):
     """Encounter lifecycle status."""
 
     PENDING = "PENDING"
@@ -53,7 +43,7 @@ class EncounterStatus(StrEnum):
     ESCALATED = "ESCALATED"
 
 
-class EncounterType(StrEnum):
+class EncounterType(str, Enum):
     """Type of encounter. Values use snake_case to match common EMR/EDI conventions."""
 
     outpatient_procedure = "outpatient_procedure"
@@ -62,7 +52,7 @@ class EncounterType(StrEnum):
     emergency = "emergency"
 
 
-class PriorAuthStatus(StrEnum):
+class PriorAuthStatus(str, Enum):
     """Prior authorization request status."""
 
     PENDING = "pending"
@@ -71,7 +61,7 @@ class PriorAuthStatus(StrEnum):
     DENIED = "denied"
 
 
-class PriorAuthDecision(StrEnum):
+class PriorAuthDecision(str, Enum):
     """Prior authorization decision outcome."""
 
     APPROVED = "approved"
@@ -79,7 +69,7 @@ class PriorAuthDecision(StrEnum):
     PENDING = "pending"
 
 
-class ClaimStatus(StrEnum):
+class ClaimStatus(str, Enum):
     """Claim submission status."""
 
     DRAFT = "draft"
