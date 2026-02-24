@@ -35,7 +35,6 @@ def check_member_eligibility(
         action="tool_call",
         tool="check_member_eligibility",
         payer=payer,
-        member_id=member_id,
         eligible=out["eligible"],
     )
     return out
@@ -58,7 +57,6 @@ def verify_benefits(
         action="tool_call",
         tool="verify_benefits",
         payer=payer,
-        member_id=member_id,
         procedure_count=len(result["procedures"]),
     )
     return out
