@@ -111,8 +111,8 @@ def suggest_codes(
 
     # Prefer .value for Enum members so messages show "office_visit" not "EncounterType.office_visit"
     _val = getattr(encounter_type, "value", None)
-    encounter_str = _val if _val is not None else (
-        encounter_type if isinstance(encounter_type, str) else str(encounter_type)
+    encounter_str = (
+        _val if _val is not None else (encounter_type if isinstance(encounter_type, str) else str(encounter_type))
     )
 
     if not suggested_icd and not suggested_cpt:

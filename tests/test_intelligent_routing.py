@@ -189,9 +189,7 @@ class TestMultiStagePipeline:
         assert outputs[0].stage == RcmStage.HUMAN_ESCALATION
         assert "router_stages" in outputs[0].raw_result
 
-    def test_process_multi_stage_halts_on_not_eligible(
-        self, examples_dir: Path
-    ) -> None:
+    def test_process_multi_stage_halts_on_not_eligible(self, examples_dir: Path) -> None:
         """When first stage returns NOT_ELIGIBLE, pipeline returns single output and does not run later stages."""
         enc = _load_encounter(examples_dir, "encounter_005_eligibility_mismatch.json")
         not_eligible_output = EncounterOutput(
@@ -429,7 +427,7 @@ class TestExternalizedConfig:
     def test_config_reload_picks_up_yaml_changes(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """After reload_routing_rules() with different YAML content, getters return updated values."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            f.write("cpt_charge_amounts:\n  \"99213\": 999.0\n  \"73721\": 1.0\n")
+            f.write('cpt_charge_amounts:\n  "99213": 999.0\n  "73721": 1.0\n')
             custom_path = Path(f.name)
         try:
             monkeypatch.setattr("rcm_agent.config.settings._ROUTING_RULES_PATH", custom_path)
