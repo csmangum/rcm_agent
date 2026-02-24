@@ -375,12 +375,12 @@ def eval_all(
     click.echo(f"  E2E: {e2e_summary.pipeline_success_rate:.1%} success rate")
 
     click.echo(f"\nReports written to {out}/")
-    click.echo(f"  - router_eval.json")
+    click.echo("  - router_eval.json")
     if pipeline_mode == "both":
-        click.echo(f"  - e2e_eval_single.json")
-        click.echo(f"  - e2e_eval_multi.json")
+        click.echo("  - e2e_eval_single.json")
+        click.echo("  - e2e_eval_multi.json")
     else:
-        click.echo(f"  - e2e_eval.json")
+        click.echo("  - e2e_eval.json")
 
 
 @main.command("process-multi")

@@ -533,7 +533,9 @@ class TestRouterEvaluation:
         assert "ENC-001" in ids
         assert "ENC-002" in ids
 
-    def test_run_evaluation_writes_report(self, examples_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_run_evaluation_writes_report(
+        self, examples_dir: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("RCM_ROUTER_LLM_ENABLED", "false")
         output_path = tmp_path / "eval_report.json"
         summary = run_evaluation(examples_dir=examples_dir, output_path=output_path)
