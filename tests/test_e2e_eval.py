@@ -234,3 +234,210 @@ def test_run_e2e_evaluation_pipeline_error(
     assert r.final_status == "ERROR"
     assert r.error == "LLM timeout"
     assert r.success is False
+
+
+@patch("rcm_agent.crews.e2e_eval.process_encounter_multi_stage")
+def test_run_e2e_evaluation_failure_status_success(
+    mock_pipeline: object,
+    encounter_005: Encounter,
+    tmp_path: Path,
+) -> None:
+    """When golden expects NOT_ELIGIBLE, mock returning NOT_ELIGIBLE is success."""
+    mock_pipeline.return_value = [
+        EncounterOutput(
+            encounter_id="ENC-005",
+            stage=RcmStage.ELIGIBILITY_VERIFICATION,
+            status=EncounterStatus.NOT_ELIGIBLE,
+            actions_taken=[],
+            artifacts=[],
+            message="Not eligible",
+            raw_result={},
+        ),
+    ]
+    golden_path = tmp_path / "golden.json"
+    golden_path.write_text(
+        '{"ENC-005": {"expected_stages": ["ELIGIBILITY_VERIFICATION"], "expected_final_status": "NOT_ELIGIBLE"}}'
+    )
+    summary = run_e2e_evaluation(
+        encounters=[encounter_005],
+        golden_path=golden_path,
+        pipeline_mode="multi",
+    )
+    assert summary.total == 1
+    r = summary.records[0]
+    assert r.final_status == "NOT_ELIGIBLE"
+    assert r.success is True
+
+
+@patch("rcm_agent.crews.e2e_eval.process_encounter_multi_stage")
+def test_run_e2e_evaluation_escalation_success(
+    mock_pipeline: object,
+    encounter_003: Encounter,
+    tmp_path: Path,
+) -> None:
+    """When golden expects escalation, mock returning HUMAN_ESCALATION + NEEDS_REVIEW is success."""
+    mock_pipeline.return_value = [
+        EncounterOutput(
+            encounter_id="ENC-003",
+            stage=RcmStage.HUMAN_ESCALATION,
+            status=EncounterStatus.NEEDS_REVIEW,
+            actions_taken=[],
+            artifacts=[],
+            message="Escalated",
+            raw_result={},
+        ),
+    ]
+    golden_path = tmp_path / "golden.json"
+    golden_path.write_text(
+        '{"ENC-003": {"expected_stages": ["HUMAN_ESCALATION"], "expected_final_status": "NEEDS_REVIEW", "expected_escalation": true}}'
+    )
+    summary = run_e2e_evaluation(
+        encounters=[encounter_003],
+        golden_path=golden_path,
+        pipeline_mode="multi",
+    )
+    assert summary.total == 1
+    r = summary.records[0]
+    assert r.final_status == "NEEDS_REVIEW"
+    assert r.escalated is True
+    assert r.success is True
+
+
+@patch("rcm_agent.crews.e2e_eval.process_encounter")
+def test_run_e2e_evaluation_pipeline_mode_single(
+    mock_single: object,
+    encounter_001: Encounter,
+    tmp_path: Path,
+) -> None:
+    """Pipeline mode single uses process_encounter; report has pipeline_mode single."""
+    mock_single.return_value = EncounterOutput(
+        encounter_id="ENC-001",
+        stage=RcmStage.CODING_CHARGE_CAPTURE,
+        status=EncounterStatus.CODED,
+        actions_taken=[],
+        artifacts=[],
+        message="Coded",
+        raw_result={},
+    )
+    golden_path = tmp_path / "golden.json"
+    golden_path.write_text("{}")
+    output_path = tmp_path / "e2e_single.json"
+    summary = run_e2e_evaluation(
+        encounters=[encounter_001],
+        golden_path=golden_path,
+        output_path=output_path,
+        pipeline_mode="single",
+    )
+    assert isinstance(summary, E2ESummary)
+    assert summary.pipeline_mode == "single"
+    assert summary.total == 1
+    assert output_path.exists()
+    data = json.loads(output_path.read_text())
+    assert data["pipeline_mode"] == "single"
+
+
+@patch("rcm_agent.crews.e2e_eval.process_encounter_multi_stage")
+@patch("rcm_agent.crews.e2e_eval.process_encounter")
+def test_run_e2e_evaluation_pipeline_mode_both(
+    mock_single: object,
+    mock_multi: object,
+    encounter_001: Encounter,
+    tmp_path: Path,
+) -> None:
+    """Pipeline mode both writes e2e_eval_single.json and e2e_eval_multi.json with correct pipeline_mode."""
+    out_single = EncounterOutput(
+        encounter_id="ENC-001",
+        stage=RcmStage.CODING_CHARGE_CAPTURE,
+        status=EncounterStatus.CODED,
+        actions_taken=[],
+        artifacts=[],
+        message="Coded",
+        raw_result={},
+    )
+    mock_single.return_value = out_single
+    mock_multi.return_value = [out_single]
+    golden_path = tmp_path / "golden.json"
+    golden_path.write_text("{}")
+    result = run_e2e_evaluation(
+        encounters=[encounter_001],
+        golden_path=golden_path,
+        output_dir=tmp_path,
+        pipeline_mode="both",
+    )
+    assert isinstance(result, tuple)
+    single_summary, multi_summary = result
+    assert single_summary.pipeline_mode == "single"
+    assert multi_summary.pipeline_mode == "multi"
+    single_path = tmp_path / "e2e_eval_single.json"
+    multi_path = tmp_path / "e2e_eval_multi.json"
+    assert single_path.exists()
+    assert multi_path.exists()
+    assert json.loads(single_path.read_text())["pipeline_mode"] == "single"
+    assert json.loads(multi_path.read_text())["pipeline_mode"] == "multi"
+
+
+def test_run_e2e_evaluation_env_not_overridden(
+    encounter_001: Encounter,
+    tmp_path: Path,
+) -> None:
+    """When RCM_PRIOR_AUTH_MOCK_DENY_PAYER is already set, eval does not overwrite it."""
+    import os
+
+    with patch("rcm_agent.crews.e2e_eval.process_encounter_multi_stage") as mock_pipeline:
+        mock_pipeline.return_value = [
+            EncounterOutput(
+                encounter_id="ENC-001",
+                stage=RcmStage.CODING_CHARGE_CAPTURE,
+                status=EncounterStatus.CODED,
+                actions_taken=[],
+                artifacts=[],
+                message="Coded",
+                raw_result={},
+            ),
+        ]
+        key = "RCM_PRIOR_AUTH_MOCK_DENY_PAYER"
+        os.environ[key] = "OtherPayer"
+        try:
+            run_e2e_evaluation(
+                encounters=[encounter_001],
+                golden_path=tmp_path / "golden.json",
+                output_path=tmp_path / "out.json",
+            )
+            assert os.environ.get(key) == "OtherPayer"
+        finally:
+            os.environ.pop(key, None)
+
+
+def test_run_e2e_evaluation_env_restored_when_set(
+    encounter_001: Encounter,
+    tmp_path: Path,
+) -> None:
+    """When key was not set, eval sets it for the run then restores (removes) afterward."""
+    import os
+
+    key = "RCM_PRIOR_AUTH_MOCK_DENY_PAYER"
+    saved = os.environ.pop(key, None)
+    try:
+        with patch("rcm_agent.crews.e2e_eval.process_encounter_multi_stage") as mock_pipeline:
+            mock_pipeline.return_value = [
+                EncounterOutput(
+                    encounter_id="ENC-001",
+                    stage=RcmStage.CODING_CHARGE_CAPTURE,
+                    status=EncounterStatus.CODED,
+                    actions_taken=[],
+                    artifacts=[],
+                    message="Coded",
+                    raw_result={},
+                ),
+            ]
+            run_e2e_evaluation(
+                encounters=[encounter_001],
+                golden_path=tmp_path / "golden.json",
+                output_path=tmp_path / "out.json",
+            )
+        assert key not in os.environ or os.environ.get(key, "").strip() == ""
+    finally:
+        if saved is not None:
+            os.environ[key] = saved
+        else:
+            os.environ.pop(key, None)

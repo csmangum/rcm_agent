@@ -1,7 +1,8 @@
 """End-to-end evaluation: run full pipeline on synthetic encounters and measure outcomes.
 
-Runs process_encounter_multi_stage for each encounter, collects outcomes, and computes
-metrics: pipeline success rate, router alignment, prior auth coverage, coding/claim readiness.
+Runs process_encounter_multi_stage (or process_encounter for single-stage) for each encounter,
+collects outcomes, and computes metrics: pipeline success rate, router alignment, prior auth
+coverage, coding/claim readiness.
 Uses OpenRouter (OPENAI_API_KEY, OPENAI_API_BASE, OPENAI_MODEL_NAME) from .env for LLM calls.
 """
 
@@ -9,15 +10,18 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Callable, cast
 
-from rcm_agent.crews.main_crew import process_encounter_multi_stage
+from rcm_agent.crews.main_crew import process_encounter, process_encounter_multi_stage
 from rcm_agent.crews.router_eval import _default_examples_dir, _default_golden_path, load_encounters_from_dir
 from rcm_agent.models import Encounter, EncounterOutput, EncounterStatus, RcmStage
 
 logger = logging.getLogger(__name__)
+
+PIPELINE_MODES = ("single", "multi", "both")
 
 # Failure statuses that halt the pipeline
 _FAILURE_STATUSES = frozenset(
@@ -55,6 +59,7 @@ class E2ERecord:
     router_aligned: bool | None
     final_status_aligned: bool | None = None
     needs_prior_auth_aligned: bool | None = None
+    auth_outcome_aligned: bool | None = None
     success: bool = False
     error: str | None = None
     artifacts: dict[str, Any] = field(default_factory=dict)
@@ -72,6 +77,7 @@ class E2ERecord:
             "router_aligned": self.router_aligned,
             "final_status_aligned": self.final_status_aligned,
             "needs_prior_auth_aligned": self.needs_prior_auth_aligned,
+            "auth_outcome_aligned": self.auth_outcome_aligned,
             "success": self.success,
             "error": self.error,
             "artifacts": self.artifacts,
@@ -95,7 +101,10 @@ class E2ESummary:
     golden_final_status_count: int = 0
     needs_prior_auth_aligned_count: int = 0
     golden_needs_prior_auth_count: int = 0
+    auth_outcome_aligned_count: int = 0
+    golden_auth_outcome_count: int = 0
     records: list[E2ERecord] = field(default_factory=list)
+    pipeline_mode: str = "multi"
 
     @property
     def pipeline_success_rate(self) -> float:
@@ -131,8 +140,16 @@ class E2ESummary:
             else 0.0
         )
 
+    @property
+    def auth_outcome_alignment_rate(self) -> float:
+        return (
+            self.auth_outcome_aligned_count / self.golden_auth_outcome_count
+            if self.golden_auth_outcome_count > 0
+            else 0.0
+        )
+
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "total": self.total,
             "pipeline_successes": self.pipeline_successes,
             "pipeline_success_rate": round(self.pipeline_success_rate, 3),
@@ -152,8 +169,13 @@ class E2ESummary:
             "needs_prior_auth_aligned": self.needs_prior_auth_aligned_count,
             "golden_needs_prior_auth": self.golden_needs_prior_auth_count,
             "needs_prior_auth_alignment_rate": round(self.needs_prior_auth_alignment_rate, 3),
+            "auth_outcome_aligned": self.auth_outcome_aligned_count,
+            "golden_auth_outcome": self.golden_auth_outcome_count,
+            "auth_outcome_alignment_rate": round(self.auth_outcome_alignment_rate, 3),
             "records": [r.to_dict() for r in self.records],
         }
+        d["pipeline_mode"] = self.pipeline_mode
+        return d
 
 
 def _load_golden(golden_path: Path | None) -> dict[str, dict[str, Any]]:
@@ -214,7 +236,9 @@ def run_e2e_evaluation(
     golden_path: str | Path | None = None,
     output_path: str | Path | None = None,
     output_dir: str | Path | None = None,
-) -> E2ESummary:
+    pipeline_mode: str = "multi",
+    prior_auth_deny_payer: str | None = None,
+) -> E2ESummary | tuple[E2ESummary, E2ESummary]:
     """
     Run e2e evaluation: full pipeline on each encounter, collect outcomes, compute metrics.
 
@@ -224,32 +248,105 @@ def run_e2e_evaluation(
         golden_path: Path to golden.json with expected stages/outcomes.
         output_path: Path to write JSON report.
         output_dir: If set, write report to output_dir/e2e_eval.json.
+        pipeline_mode: "single" | "multi" | "both". single=process_encounter (one stage);
+            multi=process_encounter_multi_stage (default); both=runs both, writes separate reports.
+        prior_auth_deny_payer: If set, use this payer name for mock AUTH_DENIED for the run only
+            (overrides env). If unset and env RCM_PRIOR_AUTH_MOCK_DENY_PAYER is empty, sets
+            "AuthDenyPayer" for the run and restores env afterward.
 
     Returns:
-        E2ESummary with per-encounter records and aggregate metrics.
+        E2ESummary for single/multi mode; (single_summary, multi_summary) for both mode.
     """
     # Ensure config is loaded (load_dotenv via settings)
     from rcm_agent.config import settings  # noqa: F401
 
-    if encounters is None:
-        if examples_dir is None:
-            examples_dir = _default_examples_dir()
-        examples_dir = Path(examples_dir)
-        logger.info("Loading encounters from %s", examples_dir)
-        encounters = load_encounters_from_dir(examples_dir)
+    _deny_key = "RCM_PRIOR_AUTH_MOCK_DENY_PAYER"
+    _had_deny_payer = _deny_key in os.environ
+    _saved_deny_value: str | None = os.environ.get(_deny_key) if _had_deny_payer else None
+    try:
+        if prior_auth_deny_payer is not None:
+            os.environ[_deny_key] = prior_auth_deny_payer
+        elif os.environ.get(_deny_key, "").strip() == "":
+            os.environ.setdefault(_deny_key, "AuthDenyPayer")
 
-    if not encounters:
-        logger.warning("No encounters to evaluate")
-        return E2ESummary()
+        if encounters is None:
+            if examples_dir is None:
+                examples_dir = _default_examples_dir()
+            examples_dir = Path(examples_dir)
+            logger.info("Loading encounters from %s", examples_dir)
+            encounters = load_encounters_from_dir(examples_dir)
 
-    golden = _load_golden(Path(golden_path) if golden_path else _default_golden_path())
+        if not encounters:
+            logger.warning("No encounters to evaluate")
+            return E2ESummary()
 
+        golden = _load_golden(Path(golden_path) if golden_path else _default_golden_path())
+
+        mode = (pipeline_mode or "multi").strip().lower()
+        if mode not in PIPELINE_MODES:
+            mode = "multi"
+
+        def _run_single(enc: Encounter) -> list[EncounterOutput]:
+            out = process_encounter(enc)
+            return [out]
+
+        def _run_multi(enc: Encounter) -> list[EncounterOutput]:
+            return process_encounter_multi_stage(enc)
+
+        run_pipeline = _run_single if mode == "single" else _run_multi
+
+        if mode == "both":
+            summaries: list[tuple[str, E2ESummary]] = [
+                ("single", _run_e2e_pass(encounters, golden, _run_single, "single")),
+                ("multi", _run_e2e_pass(encounters, golden, _run_multi, "multi")),
+            ]
+            base = Path(output_dir) if output_dir else (Path(output_path).parent if output_path else Path("reports"))
+            base.mkdir(parents=True, exist_ok=True)
+            for name, s in summaries:
+                p = base / f"e2e_eval_{name}.json"
+                with open(p, "w", encoding="utf-8") as f:
+                    json.dump(s.to_dict(), f, indent=2)
+                _write_markdown_summary(s, p.with_suffix(".md"))
+                logger.info("E2E eval %s report written to %s", name, p)
+            return (summaries[0][1], summaries[1][1])
+
+        summary = _run_e2e_pass(encounters, golden, run_pipeline, mode)
+        summary.pipeline_mode = mode
+
+        out = output_path or (Path(output_dir) / "e2e_eval.json" if output_dir else None)
+        if out:
+            out = Path(out)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            with open(out, "w", encoding="utf-8") as f:
+                json.dump(summary.to_dict(), f, indent=2)
+            logger.info("E2E eval report written to %s", out)
+            _write_markdown_summary(summary, out.with_suffix(".md"))
+
+        return summary
+    finally:
+        if prior_auth_deny_payer is not None:
+            if _saved_deny_value is not None:
+                os.environ[_deny_key] = _saved_deny_value
+            else:
+                os.environ.pop(_deny_key, None)
+        elif not _had_deny_payer:
+            os.environ.pop(_deny_key, None)
+
+
+def _run_e2e_pass(
+    encounters: list[Encounter],
+    golden: dict[str, dict[str, Any]],
+    run_pipeline: Callable[[Encounter], list[EncounterOutput]],
+    pipeline_mode: str,
+) -> E2ESummary:
+    """Run one pass of e2e evaluation with the given pipeline function."""
     summary = E2ESummary()
     summary.total = len(encounters)
+    summary.pipeline_mode = pipeline_mode
 
     for encounter in encounters:
         try:
-            outputs = process_encounter_multi_stage(encounter)
+            outputs = run_pipeline(encounter)
         except Exception as e:
             logger.exception("Pipeline failed for %s", encounter.encounter_id)
             summary.records.append(
@@ -265,6 +362,7 @@ def run_e2e_evaluation(
                     router_aligned=None,
                     final_status_aligned=None,
                     needs_prior_auth_aligned=None,
+                    auth_outcome_aligned=None,
                     success=False,
                     error=str(e),
                 )
@@ -284,15 +382,25 @@ def run_e2e_evaluation(
             "CLAIM_ACCEPTED",
         )
 
-        # Pipeline success: completed without fatal error and without inappropriate escalation
-        is_success = (
-            not escalated
-            and last is not None
-            and last.status not in _FAILURE_STATUSES
-            and (last.status in _CLEAN_STATUSES or last.stage == RcmStage.DENIAL_APPEAL)
-        )
-
         g = golden.get(encounter.encounter_id) or {}
+        expected_final = g.get("expected_final_status")
+        expected_escalation = g.get("expected_escalation", False)
+
+        # Pipeline success: when golden expects a specific outcome, success = match.
+        # When golden expects escalation (e.g. ENC-003), success = correctly escalated.
+        # When golden expects failure status (NOT_ELIGIBLE, AUTH_DENIED, CLAIM_DENIED), success = correctly produced it.
+        # Otherwise: completed without fatal error and without inappropriate escalation.
+        if expected_escalation:
+            is_success = escalated and last is not None and final_status == (expected_final or "NEEDS_REVIEW")
+        elif expected_final and expected_final in (s.value for s in _FAILURE_STATUSES):
+            is_success = not escalated and last is not None and final_status == expected_final
+        else:
+            is_success = (
+                not escalated
+                and last is not None
+                and last.status not in _FAILURE_STATUSES
+                and (last.status in _CLEAN_STATUSES or last.stage == RcmStage.DENIAL_APPEAL)
+            )
         router_aligned = _compute_router_alignment(stages_run, g)
         final_status_aligned: bool | None = None
         if "expected_final_status" in g and g["expected_final_status"] is not None:
@@ -300,6 +408,14 @@ def run_e2e_evaluation(
         needs_prior_auth_aligned: bool | None = None
         if "needs_prior_auth" in g:
             needs_prior_auth_aligned = prior_auth_needed == g["needs_prior_auth"]
+
+        auth_outcome_aligned: bool | None = None
+        if "expected_auth_outcome" in g and prior_auth_produced:
+            expected = (g.get("expected_auth_outcome") or "").strip().lower()
+            if expected == "approved":
+                auth_outcome_aligned = prior_auth_approved is True
+            elif expected == "denied":
+                auth_outcome_aligned = prior_auth_approved is False
 
         artifacts: dict[str, Any] = {}
         for o in outputs:
@@ -324,6 +440,7 @@ def run_e2e_evaluation(
             router_aligned=router_aligned,
             final_status_aligned=final_status_aligned,
             needs_prior_auth_aligned=needs_prior_auth_aligned,
+            auth_outcome_aligned=auth_outcome_aligned,
             success=is_success,
             artifacts=artifacts,
         )
@@ -353,17 +470,10 @@ def run_e2e_evaluation(
             summary.golden_needs_prior_auth_count += 1
             if needs_prior_auth_aligned:
                 summary.needs_prior_auth_aligned_count += 1
-
-    out = output_path or (Path(output_dir) / "e2e_eval.json" if output_dir else None)
-    if out:
-        out = Path(out)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        with open(out, "w", encoding="utf-8") as f:
-            json.dump(summary.to_dict(), f, indent=2)
-        logger.info("E2E eval report written to %s", out)
-        # Write markdown summary alongside JSON
-        md_path = out.with_suffix(".md")
-        _write_markdown_summary(summary, md_path)
+        if auth_outcome_aligned is not None:
+            summary.golden_auth_outcome_count += 1
+            if auth_outcome_aligned:
+                summary.auth_outcome_aligned_count += 1
 
     return summary
 
@@ -373,6 +483,7 @@ def _write_markdown_summary(summary: E2ESummary, path: Path) -> None:
     lines = [
         "# E2E Evaluation Summary",
         "",
+        f"- **Pipeline mode:** {summary.pipeline_mode}",
         f"- **Total encounters:** {summary.total}",
         f"- **Pipeline success rate:** {summary.pipeline_success_rate:.1%}",
         f"- **Escalations:** {summary.escalations}",
@@ -390,6 +501,10 @@ def _write_markdown_summary(summary: E2ESummary, path: Path) -> None:
     if summary.golden_needs_prior_auth_count > 0:
         lines.append(
             f"- **Needs prior auth alignment (vs golden):** {summary.needs_prior_auth_aligned_count}/{summary.golden_needs_prior_auth_count}"
+        )
+    if summary.golden_auth_outcome_count > 0:
+        lines.append(
+            f"- **Auth outcome alignment (vs golden):** {summary.auth_outcome_aligned_count}/{summary.golden_auth_outcome_count}"
         )
     lines.extend(
         [

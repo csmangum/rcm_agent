@@ -47,6 +47,14 @@ _MOCK_ELIGIBILITY: dict[tuple[str, str], dict[str, Any]] = {
         "in_network": True,
         "member_status": "terminated",
     },
+    ("AuthDenyPayer", "AUTH-DENY-001"): {
+        "eligible": True,
+        "plan_name": "AuthDeny Test Plan",
+        "effective_date": "2025-01-01",
+        "termination_date": None,
+        "in_network": True,
+        "member_status": "active",
+    },
 }
 
 _DEFAULT_ELIGIBILITY: dict[str, Any] = {
@@ -74,6 +82,9 @@ _MOCK_BENEFITS: dict[tuple[str, str], dict[str, dict[str, Any]]] = {
     },
     ("Anthem", "ANT777888999"): {
         "99285": {"covered": False, "copay": None, "coinsurance_pct": None, "deductible_remaining": None},
+    },
+    ("AuthDenyPayer", "AUTH-DENY-001"): {
+        "73721": {"covered": True, "copay": 0, "coinsurance_pct": 20, "deductible_remaining": 200},
     },
 }
 
