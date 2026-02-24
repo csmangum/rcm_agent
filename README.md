@@ -55,4 +55,5 @@ pytest
 - `src/rcm_agent/` – main package (agents, crews, tools, models, db, config, rag, observability)
 - `data/examples/` – synthetic encounter JSONs
 - `data/rag_corpus/` – payer policies and coding guidelines (Phase 4)
+- `docs/` – documentation ([INTEGRATIONS.md](docs/INTEGRATIONS.md) – external protocols, mocks, and plugging in real systems)
 - `tests/` – pytest tests

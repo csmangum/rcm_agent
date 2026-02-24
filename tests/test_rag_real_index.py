@@ -2,6 +2,7 @@
 
 Run only when the index exists (e.g. RCM_RAG_CHROMA_DIR or ~/medicare_rag/data/chroma).
 Skip when index is missing or medicare_rag is not installed so CI without the index still passes.
+Skip when index exists but Chroma cannot connect (version mismatch, rust panic, or tenant error).
 
 Run with: pytest tests/test_rag_real_index.py -v
 Run all including these: pytest tests/ -v
@@ -30,17 +31,70 @@ def _medicare_rag_available() -> bool:
         return False
 
 
+def _probe_chroma_connection(chroma_dir: Path) -> tuple[bool, str]:
+    """Try to create a retriever and run one query. Return (True, '') if OK, (False, reason) otherwise."""
+    prev_data_dir = os.environ.get("DATA_DIR")
+    try:
+        os.environ["DATA_DIR"] = str(chroma_dir.parent)
+        from medicare_rag.query.retriever import get_retriever
+        retriever = get_retriever(k=5)
+        retriever.invoke("test")
+        return (True, "")
+    except BaseException as e:
+        # PanicException (Chroma rust panic) does not inherit from Exception
+        err = f"{type(e).__name__}: {e}"
+        if "default_tenant" in err or "PanicException" in type(e).__name__:
+            hint = " (upgrade chromadb, run 'chromadb utils vacuum' on the index, or recreate with medicare_rag)"
+        else:
+            hint = ""
+        return (False, err + hint)
+    finally:
+        if prev_data_dir is not None:
+            os.environ["DATA_DIR"] = prev_data_dir
+        else:
+            os.environ.pop("DATA_DIR", None)
+
+
+# Cached result of connection probe (lazy, set when first test runs)
+_chroma_connection_ok: bool | None = None
+_chroma_connection_reason: str = ""
+
+
+def _chroma_connection_works() -> tuple[bool, str]:
+    """Return (ok, reason). Probe once and cache."""
+    global _chroma_connection_ok, _chroma_connection_reason
+    if _chroma_connection_ok is not None:
+        return (_chroma_connection_ok, _chroma_connection_reason)
+    chroma_dir = _get_real_chroma_dir()
+    if not chroma_dir or not _medicare_rag_available():
+        _chroma_connection_ok = False
+        _chroma_connection_reason = "Real Chroma index not found or medicare_rag not installed"
+        return (_chroma_connection_ok, _chroma_connection_reason)
+    _chroma_connection_ok, _chroma_connection_reason = _probe_chroma_connection(chroma_dir)
+    return (_chroma_connection_ok, _chroma_connection_reason)
+
+
 _skip_if_no_real_index = pytest.mark.skipif(
     _get_real_chroma_dir() is None or not _medicare_rag_available(),
     reason="Real Chroma index not found or medicare_rag not installed (set RCM_RAG_CHROMA_DIR or create ~/medicare_rag/data/chroma, pip install -e medicare_rag)",
 )
 
 
+@pytest.fixture(scope="module")
+def chroma_connection() -> tuple[bool, str]:
+    """Probe Chroma once per module. (ok, reason); if not ok, tests should skip with reason."""
+    return _chroma_connection_works()
+
+
 @_skip_if_no_real_index
 @pytest.mark.integration
 @pytest.mark.slow
-def test_rag_search_payer_policies_real_index(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_rag_search_payer_policies_real_index(
+    chroma_connection: tuple[bool, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
     """search_payer_policies with RAG backend returns non-empty snippets from real Chroma."""
+    if not chroma_connection[0]:
+        pytest.skip(chroma_connection[1])
     chroma_dir = _get_real_chroma_dir()
     assert chroma_dir is not None
     monkeypatch.setenv("RCM_RAG_BACKEND", "rag")
@@ -57,8 +111,12 @@ def test_rag_search_payer_policies_real_index(monkeypatch: pytest.MonkeyPatch) -
 @_skip_if_no_real_index
 @pytest.mark.integration
 @pytest.mark.slow
-def test_rag_search_coding_guidelines_real_index(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_rag_search_coding_guidelines_real_index(
+    chroma_connection: tuple[bool, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
     """search_coding_guidelines with RAG backend returns non-empty snippets from real Chroma."""
+    if not chroma_connection[0]:
+        pytest.skip(chroma_connection[1])
     chroma_dir = _get_real_chroma_dir()
     assert chroma_dir is not None
     monkeypatch.setenv("RCM_RAG_BACKEND", "rag")
@@ -75,8 +133,12 @@ def test_rag_search_coding_guidelines_real_index(monkeypatch: pytest.MonkeyPatch
 @_skip_if_no_real_index
 @pytest.mark.integration
 @pytest.mark.slow
-def test_rag_search_ncci_edits_real_index(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_rag_search_ncci_edits_real_index(
+    chroma_connection: tuple[bool, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
     """search_ncci_edits with RAG backend returns snippets from real Chroma."""
+    if not chroma_connection[0]:
+        pytest.skip(chroma_connection[1])
     chroma_dir = _get_real_chroma_dir()
     assert chroma_dir is not None
     monkeypatch.setenv("RCM_RAG_BACKEND", "rag")
@@ -95,8 +157,12 @@ def test_rag_search_ncci_edits_real_index(monkeypatch: pytest.MonkeyPatch) -> No
 @_skip_if_no_real_index
 @pytest.mark.integration
 @pytest.mark.slow
-def test_rag_search_cms_requirements_real_index(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_rag_search_cms_requirements_real_index(
+    chroma_connection: tuple[bool, str], monkeypatch: pytest.MonkeyPatch
+) -> None:
     """search_cms_requirements with RAG backend returns snippets from real Chroma."""
+    if not chroma_connection[0]:
+        pytest.skip(chroma_connection[1])
     chroma_dir = _get_real_chroma_dir()
     assert chroma_dir is not None
     monkeypatch.setenv("RCM_RAG_BACKEND", "rag")
@@ -113,8 +179,12 @@ def test_rag_search_cms_requirements_real_index(monkeypatch: pytest.MonkeyPatch)
 @_skip_if_no_real_index
 @pytest.mark.integration
 @pytest.mark.slow
-def test_prior_auth_crew_uses_real_rag_snippets(monkeypatch: pytest.MonkeyPatch, encounter_002) -> None:
+def test_prior_auth_crew_uses_real_rag_snippets(
+    chroma_connection: tuple[bool, str], monkeypatch: pytest.MonkeyPatch, encounter_002
+) -> None:
     """Prior auth crew with RAG backend gets real policy snippets in auth packet."""
+    if not chroma_connection[0]:
+        pytest.skip(chroma_connection[1])
     chroma_dir = _get_real_chroma_dir()
     assert chroma_dir is not None
     monkeypatch.setenv("RCM_RAG_BACKEND", "rag")
@@ -133,8 +203,12 @@ def test_prior_auth_crew_uses_real_rag_snippets(monkeypatch: pytest.MonkeyPatch,
 @_skip_if_no_real_index
 @pytest.mark.integration
 @pytest.mark.slow
-def test_coding_crew_uses_real_rag_snippets(monkeypatch: pytest.MonkeyPatch, encounter_001) -> None:
+def test_coding_crew_uses_real_rag_snippets(
+    chroma_connection: tuple[bool, str], monkeypatch: pytest.MonkeyPatch, encounter_001
+) -> None:
     """Coding crew with RAG backend gets real guideline snippets in raw_result."""
+    if not chroma_connection[0]:
+        pytest.skip(chroma_connection[1])
     chroma_dir = _get_real_chroma_dir()
     assert chroma_dir is not None
     monkeypatch.setenv("RCM_RAG_BACKEND", "rag")
