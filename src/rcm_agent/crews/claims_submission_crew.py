@@ -14,6 +14,7 @@ from rcm_agent.tools.claims import (
     scrub_claim,
     submit_claim,
 )
+from rcm_agent.tools._types import CleanClaimData, RemitStatusResult, SubmitClaimResult
 from rcm_agent.utils import save_artifact
 
 
@@ -138,9 +139,9 @@ def run_claims_submission_crew(
 
 def _build_remittance_summary(
     encounter: Encounter,
-    claim_data: dict[str, Any],
-    submit_result: dict[str, Any],
-    remit_result: dict[str, Any],
+    claim_data: CleanClaimData | dict[str, Any],
+    submit_result: SubmitClaimResult | dict[str, Any],
+    remit_result: RemitStatusResult | dict[str, Any],
 ) -> dict[str, Any]:
     """Build a human-readable remittance summary combining claim and 835 data."""
     return {

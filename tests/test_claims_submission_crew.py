@@ -115,7 +115,6 @@ def test_claims_crew_remit_has_adjustments(encounter_001):
 def test_claims_crew_stub_backend_graceful_handling(encounter_001, monkeypatch):
     """With stub backend (claim_id None), crew returns CLAIM_SUBMITTED and message has no 'None'."""
     from rcm_agent.integrations.claims_stub import ClaimsStub
-    from rcm_agent.integrations.registry import get_claims_backend
 
     monkeypatch.setattr(
         "rcm_agent.tools.claims.get_claims_backend",

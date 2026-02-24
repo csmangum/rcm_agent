@@ -117,7 +117,7 @@ def submit_claim(claim_data: CleanClaimData | dict[str, Any]) -> SubmitClaimResu
     """Submit a claim via the configured claims backend."""
     result = get_claims_backend().submit_claim(dict(claim_data))
     return SubmitClaimResult(
-        claim_id=result["claim_id"],
+        claim_id=result.get("claim_id"),
         status=result["status"],
         submitted_at=result["submitted_at"],
         message=result.get("message", ""),
@@ -129,7 +129,7 @@ def check_remit_status(claim_id: str) -> RemitStatusResult:
     """Check remittance / payment status for a submitted claim."""
     result = get_claims_backend().get_remit(claim_id)
     return RemitStatusResult(
-        claim_id=result["claim_id"],
+        claim_id=result.get("claim_id"),
         status=result["status"],
         paid_amount=result.get("paid_amount"),
         allowed_amount=result.get("allowed_amount"),
@@ -137,4 +137,5 @@ def check_remit_status(claim_id: str) -> RemitStatusResult:
         adjustments=result.get("adjustments", []),
         check_number=result.get("check_number"),
         remit_date=result.get("remit_date"),
+        message=result.get("message"),
     )

@@ -226,7 +226,7 @@ class ScrubResult(TypedDict):
 
 
 class SubmitClaimResult(TypedDict):
-    claim_id: str
+    claim_id: str | None
     status: str
     submitted_at: str
     message: str
@@ -241,7 +241,7 @@ class RemitAdjustment(TypedDict):
 
 
 class RemitStatusResult(TypedDict):
-    claim_id: str
+    claim_id: str | None
     status: str
     paid_amount: float | None
     allowed_amount: float | None
@@ -249,3 +249,4 @@ class RemitStatusResult(TypedDict):
     adjustments: list[RemitAdjustment]
     check_number: str | None
     remit_date: str | None
+    message: str | None
