@@ -10,6 +10,7 @@ from typing import Any
 import httpx
 from tenacity import (
     retry,
+    retry_if_exception,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
@@ -29,9 +30,20 @@ _RETRYABLE_HTTP_ERRORS = (
 )
 
 
+_RETRYABLE_STATUS_CODES = {502, 503, 504}
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    if isinstance(exc, _RETRYABLE_HTTP_ERRORS):
+        return True
+    if isinstance(exc, BackendError) and exc.status_code in _RETRYABLE_STATUS_CODES:
+        return True
+    return False
+
+
 def _retry_decorator():  # type: ignore[no-untyped-def]
     return retry(
-        retry=retry_if_exception_type(_RETRYABLE_HTTP_ERRORS),
+        retry=retry_if_exception(_is_retryable),
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
         reraise=True,
@@ -43,7 +55,21 @@ class _AsyncBaseHttpClient:
 
     def __init__(self, base_url: str, client: httpx.AsyncClient | None = None) -> None:
         self._base = base_url.rstrip("/")
-        self._client = client
+        self._external_client = client
+        self._internal_client: httpx.AsyncClient | None = None
+
+    def _get_client(self) -> httpx.AsyncClient:
+        if self._external_client is not None:
+            return self._external_client
+        if self._internal_client is None:
+            self._internal_client = httpx.AsyncClient(timeout=30.0)
+        return self._internal_client
+
+    async def aclose(self) -> None:
+        """Close the internally-managed client, if any."""
+        if self._internal_client is not None:
+            await self._internal_client.aclose()
+            self._internal_client = None
 
     async def _get(self, path: str) -> dict[str, Any]:
         return await self._request("GET", path)
@@ -56,11 +82,7 @@ class _AsyncBaseHttpClient:
         url = f"{self._base}{path}"
         logger.info("Async HTTP request", method=method, url=url)
         try:
-            if self._client is not None:
-                resp = await self._client.request(method, url, json=body)
-            else:
-                async with httpx.AsyncClient(timeout=30.0) as c:
-                    resp = await c.request(method, url, json=body)
+            resp = await self._get_client().request(method, url, json=body)
             resp.raise_for_status()
             result: dict[str, Any] = resp.json()
             return result

@@ -1,8 +1,7 @@
 """Database initialization via the migration system.
 
 Callers should use ``init_db(db_path)`` which delegates to the migration
-system.  The raw DDL constants are kept for backward-compatibility but
-the canonical schema lives in ``migrations.py``.
+system; the canonical schema lives in :mod:`rcm_agent.db.migrations`.
 """
 
 from pathlib import Path

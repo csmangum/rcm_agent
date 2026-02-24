@@ -1,6 +1,7 @@
 """Tests for async HTTP clients against the mock server."""
 
 import pytest
+import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from rcm_agent.integrations.async_http_clients import (
@@ -16,9 +17,10 @@ def async_transport():
     return ASGITransport(app=app)
 
 
-@pytest.fixture
-def async_httpx_client(async_transport):
-    return AsyncClient(transport=async_transport, base_url="http://testserver")
+@pytest_asyncio.fixture
+async def async_httpx_client(async_transport):
+    async with AsyncClient(transport=async_transport, base_url="http://testserver") as client:
+        yield client
 
 
 @pytest.mark.asyncio

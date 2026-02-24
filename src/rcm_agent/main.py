@@ -286,6 +286,7 @@ def db_migrate(db_path: str) -> None:
     """Apply pending database migrations."""
     from rcm_agent.db.migrations import current_version, migrate
 
+    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     try:
         applied = migrate(db_path)
     except DatabaseError as e:
