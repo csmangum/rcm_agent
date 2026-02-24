@@ -96,7 +96,7 @@ def assemble_auth_packet(
     Assemble structured prior auth request: patient info, procedure, clinical justification, policy refs.
     """
     notes_excerpt = (encounter.clinical_notes or "")[:500]
-    summary = clinical_indicators.get("summary", "")
+    summary = clinical_indicators["summary"]
     clinical_justification = (summary + " " + notes_excerpt).strip() or "No clinical justification extracted."
     return AuthPacket(
         encounter_id=encounter.encounter_id,
