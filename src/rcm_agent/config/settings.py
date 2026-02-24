@@ -29,18 +29,10 @@ def _parse_bool(value: str | None, default: bool) -> bool:
 def get_escalation_config() -> EscalationConfig:
     """Load escalation config from environment."""
     return EscalationConfig(
-        confidence_threshold=float(
-            os.environ.get("ESCALATION_CONFIDENCE_THRESHOLD", "0.85")
-        ),
-        high_value_threshold=float(
-            os.environ.get("ESCALATION_HIGH_VALUE_THRESHOLD", "5000")
-        ),
-        oncology_flag=_parse_bool(
-            os.environ.get("ESCALATION_ONCOLOGY_FLAG"), True
-        ),
-        incomplete_data_flag=_parse_bool(
-            os.environ.get("ESCALATION_INCOMPLETE_DATA_FLAG"), True
-        ),
+        confidence_threshold=float(os.environ.get("ESCALATION_CONFIDENCE_THRESHOLD", "0.85")),
+        high_value_threshold=float(os.environ.get("ESCALATION_HIGH_VALUE_THRESHOLD", "5000")),
+        oncology_flag=_parse_bool(os.environ.get("ESCALATION_ONCOLOGY_FLAG"), True),
+        incomplete_data_flag=_parse_bool(os.environ.get("ESCALATION_INCOMPLETE_DATA_FLAG"), True),
     )
 
 

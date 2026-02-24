@@ -3,9 +3,7 @@
 import json
 from pathlib import Path
 
-import pytest
-
-from rcm_agent.models import DenialInfo, Encounter
+from rcm_agent.models import Encounter
 from rcm_agent.tools.appeal import (
     assemble_appeal_packet,
     generate_appeal_letter,

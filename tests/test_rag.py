@@ -3,12 +3,12 @@
 import pytest
 
 from rcm_agent.rag import (
-    get_coding_guidelines_backend,
     get_cms_requirements_backend,
+    get_coding_guidelines_backend,
     get_ncci_edits_backend,
     get_payer_policy_backend,
-    rag_search_coding_guidelines,
     rag_search_cms_requirements,
+    rag_search_coding_guidelines,
     rag_search_ncci_edits,
     rag_search_payer_policies,
 )

@@ -1,8 +1,19 @@
 """Coding and charge capture tools: code suggestion, NCCI validation, missing charges, guidelines stub, fee schedule."""
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from rcm_agent.models import Encounter, EncounterType
+from rcm_agent.tools._types import (
+    InvalidPair,
+    MissingChargesResult,
+    ModifierSuggestion,
+    PerCodeReimbursement,
+    ReimbursementResult,
+    SuggestCodesResult,
+    SuggestedCode,
+    ValidateCodesResult,
+)
 
 # Keyword -> (ICD-10, CPT) suggestions for heuristic code suggestion. Subset for synthetic encounters.
 _CLINICAL_TERM_TO_CODES: dict[str, list[tuple[str, str, str]]] = {
@@ -21,9 +32,9 @@ _CLINICAL_TERM_TO_CODES: dict[str, list[tuple[str, str, str]]] = {
 # Subset of common bundling conflicts.
 _NCCI_EDITS: dict[tuple[str, str], tuple[bool, str | None]] = {
     ("99213", "99214"): (False, None),  # Cannot bill two E&M same encounter without modifier
-    ("73721", "73720"): (False, None),   # MRI with vs without contrast
+    ("73721", "73720"): (False, None),  # MRI with vs without contrast
     ("29881", "29880"): (False, None),  # Meniscectomy vs debridement
-    ("27130", "99223"): (True, "57"),   # Procedure with E&M same day: modifier 57
+    ("27130", "99223"): (True, "57"),  # Procedure with E&M same day: modifier 57
 }
 
 # Fee schedule: (cpt_code, payer) -> amount. Fallback by cpt_code only.
@@ -49,10 +60,18 @@ _MOCK_GUIDELINES: dict[str, list[str]] = {
 
 # NCCI edit lookup: (cpt1, cpt2) -> snippet list for search_ncci_edits mock.
 _MOCK_NCCI_SNIPPETS: dict[tuple[str, str], list[str]] = {
-    ("99213", "99214"): ["NCCI: Cannot bill two E&M levels for same encounter without modifier; choose one or append modifier."],
-    ("73721", "73720"): ["NCCI: MRI with (73720) vs without (73721) contrast are mutually exclusive; do not bill both for same anatomic area."],
-    ("29881", "29880"): ["NCCI: Meniscectomy (29881) and debridement (29880) bundle; separate encounters or modifier if distinct."],
-    ("27130", "99223"): ["Modifier 57 may be required for same-day E&M (99223) with decision for major procedure (27130)."],
+    ("99213", "99214"): [
+        "NCCI: Cannot bill two E&M levels for same encounter without modifier; choose one or append modifier."
+    ],
+    ("73721", "73720"): [
+        "NCCI: MRI with (73720) vs without (73721) contrast are mutually exclusive; do not bill both for same anatomic area."
+    ],
+    ("29881", "29880"): [
+        "NCCI: Meniscectomy (29881) and debridement (29880) bundle; separate encounters or modifier if distinct."
+    ],
+    ("27130", "99223"): [
+        "Modifier 57 may be required for same-day E&M (99223) with decision for major procedure (27130)."
+    ],
 }
 
 # CMS requirements by topic for search_cms_requirements mock.
@@ -67,15 +86,15 @@ def suggest_codes(
     clinical_notes: str,
     encounter_type: str | EncounterType,
     existing_codes: dict[str, list[str]] | None = None,
-) -> dict[str, Any]:
+) -> SuggestCodesResult:
     """
     Keyword-based ICD-10/CPT suggestion from clinical narrative.
     Returns suggested ICD-10-CM and CPT codes with confidence scores.
     """
     existing_codes = existing_codes or {}
     notes_lower = (clinical_notes or "").lower()
-    suggested_icd: list[dict[str, Any]] = []
-    suggested_cpt: list[dict[str, Any]] = []
+    suggested_icd: list[SuggestedCode] = []
+    suggested_cpt: list[SuggestedCode] = []
     seen_icd: set[str] = set(existing_codes.get("icd", []))
     seen_cpt: set[str] = set(existing_codes.get("cpt", []))
 
@@ -84,40 +103,41 @@ def suggest_codes(
             continue
         for icd, desc, cpt in code_tuples:
             if icd not in seen_icd:
-                suggested_icd.append({"code": icd, "description": desc, "confidence": 0.85})
+                suggested_icd.append(SuggestedCode(code=icd, description=desc, confidence=0.85))
                 seen_icd.add(icd)
             if cpt not in seen_cpt:
-                suggested_cpt.append({"code": cpt, "description": desc, "confidence": 0.85})
+                suggested_cpt.append(SuggestedCode(code=cpt, description=desc, confidence=0.85))
                 seen_cpt.add(cpt)
 
-    # If no hits, return empty with low confidence
-    if not suggested_icd and not suggested_cpt:
-        encounter_str = encounter_type if isinstance(encounter_type, str) else getattr(encounter_type, "value", str(encounter_type))
-        return {
-            "icd_codes": [],
-            "cpt_codes": [],
-            "confidence": 0.5,
-            "message": f"No keyword match for encounter type {encounter_str}; manual review recommended.",
-        }
+    encounter_str = (
+        encounter_type if isinstance(encounter_type, str) else getattr(encounter_type, "value", str(encounter_type))
+    )
 
-    encounter_str = encounter_type if isinstance(encounter_type, str) else getattr(encounter_type, "value", str(encounter_type))
-    return {
-        "icd_codes": suggested_icd,
-        "cpt_codes": suggested_cpt,
-        "confidence": 0.85 if (suggested_icd or suggested_cpt) else 0.5,
-        "message": f"Suggested {len(suggested_icd)} ICD code(s), {len(suggested_cpt)} CPT code(s) for encounter type {encounter_str}.",
-    }
+    if not suggested_icd and not suggested_cpt:
+        return SuggestCodesResult(
+            icd_codes=[],
+            cpt_codes=[],
+            confidence=0.5,
+            message=f"No keyword match for encounter type {encounter_str}; manual review recommended.",
+        )
+
+    return SuggestCodesResult(
+        icd_codes=suggested_icd,
+        cpt_codes=suggested_cpt,
+        confidence=0.85 if (suggested_icd or suggested_cpt) else 0.5,
+        message=f"Suggested {len(suggested_icd)} ICD code(s), {len(suggested_cpt)} CPT code(s) for encounter type {encounter_str}.",
+    )
 
 
 def validate_code_combinations(
     icd_codes: list[str],
     cpt_codes: list[str],
-) -> dict[str, Any]:
+) -> ValidateCodesResult:
     """
     Check against hardcoded NCCI edit subset. Return valid/invalid pairs and modifier suggestions.
     """
-    invalid_pairs: list[dict[str, Any]] = []
-    modifier_suggestions: list[dict[str, str]] = []
+    invalid_pairs: list[InvalidPair] = []
+    modifier_suggestions: list[ModifierSuggestion] = []
 
     for i, cpt1 in enumerate(cpt_codes):
         for cpt2 in cpt_codes[i + 1 :]:
@@ -126,15 +146,19 @@ def validate_code_combinations(
             if edit:
                 allowed_with_mod, mod = edit
                 if not allowed_with_mod:
-                    invalid_pairs.append({"cpt_1": key1, "cpt_2": key2, "reason": "NCCI bundle; separate or modifier."})
+                    invalid_pairs.append(
+                        InvalidPair(cpt_1=key1, cpt_2=key2, reason="NCCI bundle; separate or modifier.")
+                    )
                 elif mod:
-                    modifier_suggestions.append({"cpt": key2, "modifier": mod, "reason": "Same-day procedure with E&M."})
+                    modifier_suggestions.append(
+                        ModifierSuggestion(cpt=key2, modifier=mod, reason="Same-day procedure with E&M.")
+                    )
 
-    return {
-        "valid": len(invalid_pairs) == 0,
-        "invalid_pairs": invalid_pairs,
-        "modifier_suggestions": modifier_suggestions,
-    }
+    return ValidateCodesResult(
+        valid=len(invalid_pairs) == 0,
+        invalid_pairs=invalid_pairs,
+        modifier_suggestions=modifier_suggestions,
+    )
 
 
 def _cpt_codes_to_set(cpt_codes: list[Any]) -> set[str]:
@@ -150,9 +174,9 @@ def _cpt_codes_to_set(cpt_codes: list[Any]) -> set[str]:
 
 def identify_missing_charges(
     encounter: Encounter,
-    suggested_codes: dict[str, Any],
+    suggested_codes: SuggestCodesResult,
     effective_cpt_codes: list[str] | None = None,
-) -> dict[str, Any]:
+) -> MissingChargesResult:
     """
     Compare documented procedures to suggested/coded procedures; flag missing modifiers and missing codes.
     When effective_cpt_codes is provided (e.g. from crew after merging suggestion with existing), use it
@@ -175,17 +199,16 @@ def identify_missing_charges(
         else:
             flags.append(f"Suggested codes with no documented procedure: {sorted(extra_suggested)}")
 
-    # Modifier check: 27130 + 99223 often needs 57
     cpt_list = list(documented_cpts) + list(suggested_cpts)
     if "27130" in cpt_list and "99223" in cpt_list:
         flags.append("Consider modifier 57 for same-day E&M with major procedure.")
 
-    return {
-        "missing_codes": list(missing_codes),
-        "missing_charge_flags": flags,
-        "documented_procedures": list(documented_cpts),
-        "suggested_cpts": list(suggested_cpts),
-    }
+    return MissingChargesResult(
+        missing_codes=list(missing_codes),
+        missing_charge_flags=flags,
+        documented_procedures=list(documented_cpts),
+        suggested_cpts=list(suggested_cpts),
+    )
 
 
 def search_coding_guidelines(
@@ -244,11 +267,11 @@ def search_cms_requirements(
     return ["No CMS requirement snippet on file for this topic; refer to CMS manuals and MAC guidance."]
 
 
-def calculate_expected_reimbursement(cpt_codes: list[str], payer: str) -> dict[str, Any]:
+def calculate_expected_reimbursement(cpt_codes: list[str], payer: str) -> ReimbursementResult:
     """
     Lookup hardcoded fee schedule. Return per-code and total expected reimbursement.
     """
-    per_code: list[dict[str, Any]] = []
+    per_code: list[PerCodeReimbursement] = []
     total = 0.0
     for code in cpt_codes:
         amount = _FEE_SCHEDULE.get((code, payer))
@@ -256,10 +279,10 @@ def calculate_expected_reimbursement(cpt_codes: list[str], payer: str) -> dict[s
             amount = _FEE_SCHEDULE.get((code, ""))
         if amount is None:
             amount = _DEFAULT_FEE
-        per_code.append({"cpt_code": code, "expected_amount": amount})
+        per_code.append(PerCodeReimbursement(cpt_code=code, expected_amount=amount))
         total += amount
-    return {
-        "payer": payer,
-        "per_code": per_code,
-        "total_expected": total,
-    }
+    return ReimbursementResult(
+        payer=payer,
+        per_code=per_code,
+        total_expected=total,
+    )

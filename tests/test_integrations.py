@@ -1,7 +1,5 @@
 """Tests for integration protocols, stub implementations, and config-driven backend selection."""
 
-import os
-
 import pytest
 
 from rcm_agent.config import get_integrations_config
@@ -14,7 +12,6 @@ from rcm_agent.integrations import (
     get_prior_auth_backend,
     reset_integration_backends,
 )
-
 
 # --- ClaimsStub behavior ---
 
@@ -66,9 +63,7 @@ def test_claims_stub_isinstance_claims_backend():
 class AlwaysIneligibleEligibilityBackend:
     """Minimal alternate mock that always returns not eligible."""
 
-    def check_member_eligibility(
-        self, payer: str, member_id: str, date_of_service: str
-    ) -> dict:
+    def check_member_eligibility(self, payer: str, member_id: str, date_of_service: str) -> dict:
         return {
             "eligible": False,
             "plan_name": "Test Plan",
@@ -79,9 +74,7 @@ class AlwaysIneligibleEligibilityBackend:
             "date_of_service": date_of_service,
         }
 
-    def verify_benefits(
-        self, payer: str, member_id: str, procedure_codes: list[str]
-    ) -> dict:
+    def verify_benefits(self, payer: str, member_id: str, procedure_codes: list[str]) -> dict:
         return {
             "payer": payer,
             "member_id": member_id,

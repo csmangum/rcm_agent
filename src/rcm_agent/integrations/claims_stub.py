@@ -4,7 +4,6 @@ from typing import Any
 
 from rcm_agent.integrations._stub_utils import stub_response
 
-
 _STUB_MESSAGE = "Claims backend not implemented; use a real adapter when available."
 
 

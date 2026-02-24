@@ -22,7 +22,7 @@ from rcm_agent.models import Encounter, EncounterStatus, RcmStage
 )
 @click.pass_context
 def main(ctx: click.Context, db_path: str) -> None:
-    """Hospital RCM Agent – process encounters through eligibility, prior auth, and coding workflows."""
+    """Hospital RCM Agent - process encounters through eligibility, prior auth, and coding workflows."""
     ctx.ensure_object(dict)
     ctx.obj["db_path"] = db_path
 
@@ -43,10 +43,10 @@ def process(ctx: click.Context, encounter_file: str) -> None:
         encounter = Encounter.model_validate(data)
     except json.JSONDecodeError as e:
         click.echo(f"Invalid JSON in {encounter_file}: {e}", err=True)
-        raise SystemExit(1)
+        raise SystemExit(1) from None
     except Exception as e:
         click.echo(f"Invalid encounter data in {encounter_file}: {e}", err=True)
-        raise SystemExit(1)
+        raise SystemExit(1) from None
     repo = _repo(ctx)
 
     # Save as PENDING (INTAKE = unrouted), then PROCESSING
@@ -167,7 +167,9 @@ def metrics(ctx: click.Context) -> None:
 def serve_mock(host: str, port: int) -> None:
     """Run the FastAPI mock server for eligibility and prior-auth (HTTP)."""
     import uvicorn
+
     from rcm_agent.integrations.mock_server import app
+
     uvicorn.run(app, host=host, port=port)
 
 

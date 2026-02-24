@@ -26,6 +26,7 @@ def _get_real_chroma_dir() -> Path | None:
 def _medicare_rag_available() -> bool:
     try:
         import medicare_rag  # noqa: F401
+
         return True
     except ImportError:
         return False
@@ -37,6 +38,7 @@ def _probe_chroma_connection(chroma_dir: Path) -> tuple[bool, str]:
     try:
         os.environ["DATA_DIR"] = str(chroma_dir.parent)
         from medicare_rag.query.retriever import get_retriever
+
         retriever = get_retriever(k=5)
         retriever.invoke("test")
         return (True, "")
@@ -133,9 +135,7 @@ def test_rag_search_coding_guidelines_real_index(
 @_skip_if_no_real_index
 @pytest.mark.integration
 @pytest.mark.slow
-def test_rag_search_ncci_edits_real_index(
-    chroma_connection: tuple[bool, str], monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_rag_search_ncci_edits_real_index(chroma_connection: tuple[bool, str], monkeypatch: pytest.MonkeyPatch) -> None:
     """search_ncci_edits with RAG backend returns snippets from real Chroma."""
     if not chroma_connection[0]:
         pytest.skip(chroma_connection[1])
@@ -151,7 +151,9 @@ def test_rag_search_ncci_edits_real_index(
     # Real index may or may not have NCCI-specific chunks; accept any non-error result
     assert all(isinstance(s, str) for s in result), "expected list of strings"
     if len(result) > 0:
-        assert not result[0].startswith("No RAG") and "ChromaDB" not in result[0], "expected real snippets not error message"
+        assert not result[0].startswith("No RAG") and "ChromaDB" not in result[0], (
+            "expected real snippets not error message"
+        )
 
 
 @_skip_if_no_real_index

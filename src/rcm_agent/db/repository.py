@@ -154,7 +154,7 @@ class EncounterRepository:
             row = cur.fetchone()
             if not row:
                 return
-            current_status, current_stage = row
+            current_status, _current_stage = row
 
             updates = ["status = ?", "updated_at = ?"]
             params: list = [new_status.value, _now_utc()]
@@ -383,9 +383,7 @@ class EncounterRepository:
         """Aggregate denial analytics: by reason code, denial type, payer."""
         conn = self._conn()
         try:
-            cur = conn.execute(
-                "SELECT reason_codes, denial_type, payer FROM denial_events"
-            )
+            cur = conn.execute("SELECT reason_codes, denial_type, payer FROM denial_events")
             rows = cur.fetchall()
 
             by_reason_code: dict[str, int] = {}
@@ -394,9 +392,7 @@ class EncounterRepository:
             total = 0
             appeal_viable_count = 0
 
-            cur2 = conn.execute(
-                "SELECT COUNT(*), SUM(appeal_viable) FROM denial_events"
-            )
+            cur2 = conn.execute("SELECT COUNT(*), SUM(appeal_viable) FROM denial_events")
             row2 = cur2.fetchone()
             if row2:
                 total = row2[0] or 0
@@ -428,14 +424,10 @@ class EncounterRepository:
         """Aggregate counts by status and stage for metrics command."""
         conn = self._conn()
         try:
-            cur = conn.execute(
-                "SELECT status, COUNT(*) FROM encounters GROUP BY status"
-            )
+            cur = conn.execute("SELECT status, COUNT(*) FROM encounters GROUP BY status")
             by_status = dict(cur.fetchall())
 
-            cur = conn.execute(
-                "SELECT stage, COUNT(*) FROM encounters GROUP BY stage"
-            )
+            cur = conn.execute("SELECT stage, COUNT(*) FROM encounters GROUP BY stage")
             by_stage = dict(cur.fetchall())
 
             cur = conn.execute("SELECT COUNT(*) FROM encounters")
@@ -444,10 +436,11 @@ class EncounterRepository:
             escalated = by_status.get(EncounterStatus.ESCALATED.value, 0) + by_status.get(
                 EncounterStatus.NEEDS_REVIEW.value, 0
             )
-            clean = by_status.get(EncounterStatus.CLAIM_ACCEPTED.value, 0) + by_status.get(
-                EncounterStatus.CODED.value, 0
-            ) + by_status.get(EncounterStatus.ELIGIBLE.value, 0) + by_status.get(
-                EncounterStatus.AUTH_APPROVED.value, 0
+            clean = (
+                by_status.get(EncounterStatus.CLAIM_ACCEPTED.value, 0)
+                + by_status.get(EncounterStatus.CODED.value, 0)
+                + by_status.get(EncounterStatus.ELIGIBLE.value, 0)
+                + by_status.get(EncounterStatus.AUTH_APPROVED.value, 0)
             )
 
             denial_stats = self.get_denial_stats()

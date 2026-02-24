@@ -6,7 +6,7 @@ from pathlib import Path
 
 def test_import_rcm_agent() -> None:
     """Package can be imported."""
-    import rcm_agent  # noqa: F401
+    import rcm_agent
 
     assert rcm_agent.__version__ == "0.1.0"
 
@@ -32,5 +32,15 @@ def test_synthetic_encounter_json_loads(examples_dir: Path) -> None:
 
 def test_sample_encounter_has_expected_keys(sample_encounter_json: dict) -> None:
     """Sample encounter fixture has required schema keys."""
-    required = {"encounter_id", "patient", "insurance", "date", "type", "procedures", "diagnoses", "clinical_notes", "documents"}
+    required = {
+        "encounter_id",
+        "patient",
+        "insurance",
+        "date",
+        "type",
+        "procedures",
+        "diagnoses",
+        "clinical_notes",
+        "documents",
+    }
     assert set(sample_encounter_json.keys()) >= required

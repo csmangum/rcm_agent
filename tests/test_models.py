@@ -3,8 +3,6 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from rcm_agent.models import (
     ClaimStatus,
     ClaimSubmission,
