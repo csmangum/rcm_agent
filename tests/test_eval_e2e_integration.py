@@ -5,6 +5,7 @@ Requires OPENAI_API_KEY in .env. Skipped when key is missing.
 """
 
 import os
+from pathlib import Path
 
 import pytest
 
@@ -20,7 +21,7 @@ def _has_openai_key() -> bool:
 @pytest.mark.e2e
 @pytest.mark.llm
 @pytest.mark.skipif(not _has_openai_key(), reason="OPENAI_API_KEY not set")
-def test_e2e_eval_full_pipeline(examples_dir, tmp_path):
+def test_e2e_eval_full_pipeline(examples_dir: Path, tmp_path: Path) -> None:
     """Run e2e evaluation with real pipeline (requires OPENAI_API_KEY)."""
     from rcm_agent.crews.e2e_eval import run_e2e_evaluation
 
