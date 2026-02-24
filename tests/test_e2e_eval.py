@@ -270,6 +270,51 @@ def test_run_e2e_evaluation_failure_status_success(
 
 
 @patch("rcm_agent.crews.e2e_eval.process_encounter_multi_stage")
+def test_run_e2e_evaluation_needs_review_success(
+    mock_pipeline: object,
+    encounter_002: Encounter,
+    tmp_path: Path,
+) -> None:
+    """When golden expects NEEDS_REVIEW (no escalation), pipeline producing NEEDS_REVIEW is success."""
+    mock_pipeline.return_value = [
+        EncounterOutput(
+            encounter_id="ENC-002",
+            stage=RcmStage.PRIOR_AUTHORIZATION,
+            status=EncounterStatus.AUTH_APPROVED,
+            actions_taken=[],
+            artifacts=[],
+            message="Approved",
+            raw_result={"authorization_number": "AUTH-123"},
+        ),
+        EncounterOutput(
+            encounter_id="ENC-002",
+            stage=RcmStage.CODING_CHARGE_CAPTURE,
+            status=EncounterStatus.NEEDS_REVIEW,
+            actions_taken=[],
+            artifacts=[],
+            message="Needs review",
+            raw_result={},
+        ),
+    ]
+    golden_path = tmp_path / "golden.json"
+    golden_path.write_text(
+        '{"ENC-002": {"expected_stages": ["PRIOR_AUTHORIZATION", "CODING_CHARGE_CAPTURE"], '
+        '"expected_final_status": "NEEDS_REVIEW", "needs_prior_auth": true, "expected_auth_outcome": "approved"}}'
+    )
+    summary = run_e2e_evaluation(
+        encounters=[encounter_002],
+        golden_path=golden_path,
+        pipeline_mode="multi",
+    )
+    assert summary.total == 1
+    r = summary.records[0]
+    assert r.final_status == "NEEDS_REVIEW"
+    assert r.escalated is False
+    assert r.success is True
+    assert r.final_status_aligned is True
+
+
+@patch("rcm_agent.crews.e2e_eval.process_encounter_multi_stage")
 def test_run_e2e_evaluation_escalation_success(
     mock_pipeline: object,
     encounter_003: Encounter,
