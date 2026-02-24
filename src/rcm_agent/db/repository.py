@@ -69,6 +69,18 @@ class EncounterRepository:
     def db_path(self) -> str:
         return self._cm.db_path
 
+    def close(self) -> None:
+        """Close the underlying connection manager and any open connections."""
+        self._cm.close()
+
+    def __enter__(self) -> "EncounterRepository":
+        """Support usage as a context manager."""
+        return self
+
+    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
+        """Ensure resources are released when leaving a context block."""
+        self.close()
+
     def save_encounter(
         self,
         encounter: Encounter,
