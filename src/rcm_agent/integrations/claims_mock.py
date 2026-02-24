@@ -92,6 +92,7 @@ class ClaimsMock:
             )
 
         modifiers = claim_payload.get("modifiers") or []
+        # Suggested edit for audit; assembly (assemble_clean_claim) already adds modifier 57 when applicable.
         if "27130" in cpt_codes and "99223" in cpt_codes and "57" not in modifiers:
             edit_actions.append("AUTO_ADD_MOD57: Added modifier 57 for same-day E&M with major procedure.")
 

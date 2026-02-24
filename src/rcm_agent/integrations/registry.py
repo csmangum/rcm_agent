@@ -88,7 +88,7 @@ def get_claims_backend() -> ClaimsBackend:
             if impl is None:
                 raise ValueError(
                     f"Unknown CLAIMS_BACKEND={name!r}. "
-                    f"Supported: {list(_CLAIMS_BACKENDS)}, http. "
+                    "Supported: mock, http. "
                     "Set CLAIMS_BACKEND=mock or add the adapter to the registry."
                 )
             _claims_backend = impl()

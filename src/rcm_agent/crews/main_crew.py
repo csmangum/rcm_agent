@@ -12,6 +12,7 @@ from rcm_agent.models import (
     Encounter,
     EncounterOutput,
     EncounterStatus,
+    PipelineContext,
     RcmStage,
 )
 from rcm_agent.tools.logic import check_escalation
@@ -27,7 +28,11 @@ def estimate_charges(encounter: Encounter) -> float:
     return total if total > 0 else _DEFAULT_ESTIMATE
 
 
-def dispatch_to_crew(encounter: Encounter, stage: RcmStage) -> EncounterOutput:
+def dispatch_to_crew(
+    encounter: Encounter,
+    stage: RcmStage,
+    pipeline_context: PipelineContext | None = None,
+) -> EncounterOutput:
     """Dispatch to specialized crew by stage; stub for INTAKE only."""
     if stage == RcmStage.ELIGIBILITY_VERIFICATION:
         return run_eligibility_crew(encounter)
@@ -36,7 +41,12 @@ def dispatch_to_crew(encounter: Encounter, stage: RcmStage) -> EncounterOutput:
     if stage == RcmStage.CODING_CHARGE_CAPTURE:
         return run_coding_crew(encounter)
     if stage == RcmStage.CLAIMS_SUBMISSION:
-        return run_claims_submission_crew(encounter)
+        pc = pipeline_context or {}
+        return run_claims_submission_crew(
+            encounter,
+            coding_result=pc.get("coding_result"),
+            authorization_number=pc.get("authorization_number"),
+        )
     if stage == RcmStage.DENIAL_APPEAL:
         return run_denial_appeal_crew(encounter)
     return run_stub_crew(
@@ -46,7 +56,10 @@ def dispatch_to_crew(encounter: Encounter, stage: RcmStage) -> EncounterOutput:
     )
 
 
-def process_encounter(encounter: Encounter) -> EncounterOutput:
+def process_encounter(
+    encounter: Encounter,
+    pipeline_context: PipelineContext | None = None,
+) -> EncounterOutput:
     """
     Full pipeline: route -> escalation check -> crew dispatch (stubbed in Phase 2).
     """
@@ -74,7 +87,7 @@ def process_encounter(encounter: Encounter) -> EncounterOutput:
             },
         )
 
-    output = dispatch_to_crew(encounter, router_result.stage)
+    output = dispatch_to_crew(encounter, router_result.stage, pipeline_context)
     # Attach router metadata to raw_result for audit
     output.raw_result["router_stage"] = router_result.stage.value
     output.raw_result["router_confidence"] = router_result.confidence

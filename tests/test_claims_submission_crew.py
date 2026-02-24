@@ -110,3 +110,20 @@ def test_claims_crew_remit_has_adjustments(encounter_001):
     adjustments = remit.get("adjustments", [])
     assert len(adjustments) >= 1
     assert all("group_code" in a and "reason_code" in a for a in adjustments)
+
+
+def test_claims_crew_stub_backend_graceful_handling(encounter_001, monkeypatch):
+    """With stub backend (claim_id None), crew returns CLAIM_SUBMITTED and message has no 'None'."""
+    from rcm_agent.integrations.claims_stub import ClaimsStub
+    from rcm_agent.integrations.registry import get_claims_backend
+
+    monkeypatch.setattr(
+        "rcm_agent.tools.claims.get_claims_backend",
+        lambda: ClaimsStub(),
+    )
+    output = run_claims_submission_crew(encounter_001)
+    assert output.stage == RcmStage.CLAIMS_SUBMISSION
+    assert output.status == EncounterStatus.CLAIM_SUBMITTED
+    assert "None" not in output.message
+    assert "stub" in output.message.lower()
+    assert output.raw_result.get("claim_id") is None

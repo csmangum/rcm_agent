@@ -1,9 +1,16 @@
 """Pydantic domain models for encounters and RCM workflows."""
 
 from enum import StrEnum
-from typing import Any
+from typing import Any, TypedDict
 
 from pydantic import BaseModel, Field
+
+
+class PipelineContext(TypedDict, total=False):
+    """Optional context from earlier pipeline stages (e.g. coding, prior auth)."""
+
+    coding_result: dict[str, Any]
+    authorization_number: str
 
 
 class RcmStage(StrEnum):

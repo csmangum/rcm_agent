@@ -37,4 +37,5 @@ class ClaimsStub:
         out["adjustments"] = []
         out["check_number"] = None
         out["remit_date"] = None
+        out["message"] = _STUB_MESSAGE
         return out

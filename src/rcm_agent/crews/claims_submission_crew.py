@@ -52,6 +52,8 @@ def run_claims_submission_crew(
     actions.append("scrub_claim")
     scrub_result = scrub_claim(claim_data)
 
+    # edit_actions are advisory/audit-only; we do not apply them to claim_data before submit.
+    # Assembly (e.g. assemble_clean_claim) is responsible for applying known edits (e.g. modifier 57).
     if scrub_result.get("edit_actions"):
         for edit in scrub_result["edit_actions"]:
             actions.append(f"auto_edit:{edit.split(':')[0]}")
@@ -74,10 +76,23 @@ def run_claims_submission_crew(
     # --- Agent 3: submission_tracker ---
     actions.append("submit_claim")
     submit_result = submit_claim(claim_data)
-    claim_id = submit_result["claim_id"]
+    claim_id = submit_result.get("claim_id")
 
-    actions.append("check_remit_status")
-    remit_result = check_remit_status(claim_id)
+    if claim_id:
+        actions.append("check_remit_status")
+        remit_result = check_remit_status(claim_id)
+    else:
+        remit_result = {
+            "claim_id": None,
+            "status": "pending",
+            "paid_amount": None,
+            "allowed_amount": None,
+            "patient_responsibility": None,
+            "adjustments": [],
+            "check_number": None,
+            "remit_date": None,
+            "message": "Remittance not available (stub backend).",
+        }
 
     remit_artifact = f"remittance_835_{encounter.encounter_id}.json"
     remit_summary = _build_remittance_summary(encounter, claim_data, submit_result, remit_result)
@@ -85,16 +100,24 @@ def run_claims_submission_crew(
     artifacts.append(remit_artifact)
 
     remit_status = remit_result.get("status", "pending")
-    if remit_status == "paid":
+    normalized_status = (
+        "paid" if remit_status == "paid" else "denied" if remit_status == "denied" else "pending"
+    )
+    claim_id_display = claim_id or "unknown"
+
+    if not claim_id:
+        encounter_status = EncounterStatus.CLAIM_SUBMITTED
+        message = "Claim submitted (backend stub); remittance not available."
+    elif normalized_status == "paid":
         encounter_status = EncounterStatus.CLAIM_ACCEPTED
         paid = remit_result.get("paid_amount") or 0.0
-        message = f"Claim {claim_id} accepted and paid ${paid:,.2f}; tracking={submit_result.get('tracking_number')}."
-    elif remit_status == "denied":
+        message = f"Claim {claim_id_display} accepted and paid ${paid:,.2f}; tracking={submit_result.get('tracking_number')}."
+    elif normalized_status == "denied":
         encounter_status = EncounterStatus.CLAIM_DENIED
-        message = f"Claim {claim_id} denied by payer; see remittance for CARC/RARC details."
+        message = f"Claim {claim_id_display} denied by payer; see remittance for CARC/RARC details."
     else:
         encounter_status = EncounterStatus.CLAIM_SUBMITTED
-        message = f"Claim {claim_id} submitted; remittance pending."
+        message = f"Claim {claim_id_display} submitted; remittance pending."
 
     return EncounterOutput(
         encounter_id=encounter.encounter_id,
