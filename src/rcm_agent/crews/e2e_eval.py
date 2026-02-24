@@ -380,20 +380,26 @@ def _write_markdown_summary(summary: E2ESummary, path: Path) -> None:
         f"- **Claim readiness:** {summary.reached_claims_count}/{summary.total}",
     ]
     if summary.golden_compared_count > 0:
-        lines.append(f"- **Router alignment (vs golden):** {summary.router_aligned_count}/{summary.golden_compared_count}")
+        lines.append(
+            f"- **Router alignment (vs golden):** {summary.router_aligned_count}/{summary.golden_compared_count}"
+        )
     if summary.golden_final_status_count > 0:
-        lines.append(f"- **Final status alignment (vs golden):** {summary.final_status_aligned_count}/{summary.golden_final_status_count}")
+        lines.append(
+            f"- **Final status alignment (vs golden):** {summary.final_status_aligned_count}/{summary.golden_final_status_count}"
+        )
     if summary.golden_needs_prior_auth_count > 0:
         lines.append(
             f"- **Needs prior auth alignment (vs golden):** {summary.needs_prior_auth_aligned_count}/{summary.golden_needs_prior_auth_count}"
         )
-    lines.extend([
-        "",
-        "## Per-encounter",
-        "",
-        "| Encounter | Stages | Status | Success |",
-        "|-----------|--------|--------|---------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Per-encounter",
+            "",
+            "| Encounter | Stages | Status | Success |",
+            "|-----------|--------|--------|---------|",
+        ]
+    )
     for r in summary.records:
         success = "✓" if r.success else "✗"
         lines.append(f"| {r.encounter_id} | {', '.join(r.stages_run)} | {r.final_status} | {success} |")
