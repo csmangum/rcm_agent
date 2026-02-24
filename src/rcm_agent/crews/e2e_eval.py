@@ -11,9 +11,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 from rcm_agent.crews.main_crew import process_encounter, process_encounter_multi_stage
 from rcm_agent.crews.router_eval import _default_examples_dir, _default_golden_path, load_encounters_from_dir
