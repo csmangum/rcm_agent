@@ -30,7 +30,7 @@ def run_denial_appeal_crew(encounter: Encounter) -> EncounterOutput:
 
     actions.append("assess_appeal_viability")
     appeal_viable, viability_summary = assess_appeal_viability(
-        denial_type, reason_codes, encounter
+        reason_codes, encounter
     )
 
     denial_analysis = {

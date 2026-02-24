@@ -62,7 +62,6 @@ def classify_denial_type(reason_codes: list[str]) -> str:
 
 
 def assess_appeal_viability(
-    denial_type: str,
     reason_codes: list[str],
     encounter: Encounter,
 ) -> tuple[bool, str]:

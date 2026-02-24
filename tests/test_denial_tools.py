@@ -70,7 +70,7 @@ def test_classify_denial_type_mixed_codes() -> None:
 def test_assess_appeal_viability_prior_auth_viable(examples_dir: Path) -> None:
     """PR-96 with documents -> viable."""
     encounter = _load_encounter(examples_dir, "encounter_004_denial_scenario.json")
-    viable, summary = assess_appeal_viability(DenialType.ADMINISTRATIVE, ["PR-96"], encounter)
+    viable, summary = assess_appeal_viability(["PR-96"], encounter)
     assert viable is True
     assert "prior auth" in summary.lower() or "appeal" in summary.lower()
 
@@ -88,7 +88,7 @@ def test_assess_appeal_viability_duplicate_not_viable() -> None:
         clinical_notes="",
         documents=[],
     )
-    viable, summary = assess_appeal_viability(DenialType.TECHNICAL, ["CO-18"], encounter)
+    viable, summary = assess_appeal_viability(["CO-18"], encounter)
     assert viable is False
     assert "duplicate" in summary.lower()
 
