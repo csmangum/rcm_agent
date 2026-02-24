@@ -47,13 +47,19 @@ rcm-agent eval-e2e -o reports/e2e_eval.json
 
 Requires `OPENAI_API_KEY` in `.env`.
 
+Pipeline mode (`--pipeline`):
+
+- `multi` (default): Multi-stage pipeline (`process_encounter_multi_stage`)
+- `single`: Single-stage pipeline (`process_encounter`, one route → one crew)
+- `both`: Runs both; writes `e2e_eval_single.json` and `e2e_eval_multi.json` to output dir
+
 ### Full suite (router + e2e)
 
 ```bash
 rcm-agent eval-all -o reports
 ```
 
-Writes `reports/router_eval.json` and `reports/e2e_eval.json` (plus `e2e_eval.md` summary). Use `--golden <path>` to override the default golden file (repo `data/eval/golden.json`) for e2e comparison.
+Writes `reports/router_eval.json` and `reports/e2e_eval.json` (plus `e2e_eval.md` summary). Use `--golden <path>` to override the default golden file (repo `data/eval/golden.json`) for e2e comparison. Use `--pipeline single|multi|both` for e2e pipeline mode.
 
 ### Pytest
 
@@ -72,9 +78,11 @@ Writes `reports/router_eval.json` and `reports/e2e_eval.json` (plus `e2e_eval.md
 
 ### E2E report (`e2e_eval.json`)
 
-- `total`, `pipeline_successes`, `pipeline_success_rate`
+- `total`, `pipeline_successes`, `pipeline_success_rate`, `pipeline_mode`
 - `escalations`, `prior_auth_*`, `claim_readiness_rate`, `router_alignment_rate`
 - `records`: per-encounter stages run, final status, success, artifacts
+
+When `--pipeline both`, reports are written as `e2e_eval_single.json` and `e2e_eval_multi.json`.
 
 ### E2E markdown summary (`e2e_eval.md`)
 
@@ -92,7 +100,7 @@ Optional expected outcomes for regression testing. Edit `data/eval/golden.json`:
 {
   "ENC-001": {
     "expected_stages": ["CODING_CHARGE_CAPTURE", "CLAIMS_SUBMISSION"],
-    "expected_final_status": "CLAIM_SUBMITTED",
+    "expected_final_status": "CLAIM_ACCEPTED",
     "needs_prior_auth": false
   }
 }
@@ -104,33 +112,46 @@ When golden data exists, e2e eval computes:
 - **Final status alignment rate:** when `expected_final_status` is set (non-null), fraction where actual final status matches
 - **Needs prior auth alignment rate:** when `needs_prior_auth` is set, fraction where encounter’s prior-auth need matches the golden value
 
+Golden keys: `expected_stages`, `expected_final_status`, `expected_escalation`, `expected_auth_outcome`, `needs_prior_auth`, `description`.
+
 ## Coverage and limitations
 
-The eval suite is **not** comprehensive to the entire RCM agentic system. It covers a subset of behaviors and scenarios.
+The eval suite covers the RCM agentic system within practical scope. Some behaviors remain out of scope.
 
 **What is covered**
 
 - **Router:** Heuristic vs LLM agreement (primary stage and multi-stage sequence) on all example encounters.
-- **E2E pipeline:** Multi-stage pipeline only (`process_encounter_multi_stage`) on the same 6 synthetic encounters. Metrics: success rate, router alignment (vs golden), prior-auth coverage, claim readiness, escalation count.
-- **Stages exercised in examples:** Eligibility (005), prior auth (002), coding + claims (001, 002), denial/appeal (004, 006), escalation (003 via high charges).
-- **Golden expectations:** Only ENC-001, ENC-002, ENC-004 have golden entries; ENC-003, ENC-005, ENC-006 have no expected_stages/expected_final_status.
+- **E2E pipeline:** Multi-stage (`process_encounter_multi_stage`) and single-stage (`process_encounter`) via `--pipeline single|multi|both`. Metrics: success rate, router alignment (vs golden), prior-auth coverage, claim readiness, escalation count.
+- **Stages exercised:** Eligibility (005), prior auth (002, 008), coding + claims (001, 002), denial/appeal (004, 006, 007), escalation (003 via high charges).
+- **Golden expectations:** All encounters (ENC-001 through ENC-008) have golden entries with `expected_stages`, `expected_final_status` (or null), `needs_prior_auth`, and optional `expected_escalation`.
+- **Failure scenarios:** ENC-007 (CO-18 duplicate → CLAIM_DENIED), ENC-008 (prior auth denied → AUTH_DENIED). Eval sets `RCM_PRIOR_AUTH_MOCK_DENY_PAYER=AuthDenyPayer` by default so ENC-008 produces AUTH_DENIED.
+- **Escalation:** ENC-003 has `expected_escalation: true`; success = pipeline correctly escalated.
+- **Persistence/CLI:** `test_persistence_cli_pipeline` (pytest `-m e2e`) runs `rcm-agent process` and asserts stored state matches pipeline output via `EncounterRepository`.
+- **Optional RAG:** Eval can run with `RCM_RAG_BACKEND=rag` (and Chroma index); report does not yet include RAG-quality metrics.
+- **Optional HTTP backends:** Run `rcm-agent serve-mock` in one terminal, then `ELIGIBILITY_BACKEND=http PRIOR_AUTH_BACKEND=http rcm-agent eval-e2e` to exercise HTTP; documented as optional.
 
 **What is not covered**
 
-- **Single-stage pipeline:** `process_encounter` (single-stage route → crew) is never run in eval; only multi-stage is evaluated.
-- **INTAKE / HUMAN_ESCALATION as router outputs:** Router can return INTAKE or HUMAN_ESCALATION; no examples or metrics target those paths explicitly (escalation is only measured when the pipeline returns HUMAN_ESCALATION due to escalation check, not router).
-- **RAG quality:** Eval uses default backends (typically mock). No assessment of RAG-backed coding guidelines or payer policy retrieval.
-- **Integrations:** All backends are mock (eligibility, prior auth, claims). No evaluation of HTTP or real payer behavior.
-- **Persistence:** No checks that DB state or audit trail are correct after a run.
+- **INTAKE / HUMAN_ESCALATION as router outputs:** Router can return INTAKE or HUMAN_ESCALATION; escalation is measured when pipeline returns HUMAN_ESCALATION due to `check_escalation()`, not router output.
+- **RAG quality:** No retrieval precision/recall or guideline coverage metrics.
+- **Production payer integrations:** No eval against real payer APIs.
 - **Crew output quality:** No metrics on coding accuracy, appeal packet quality, or eligibility output correctness—only pipeline success and router alignment.
-- **Failure scenarios:** No encounter with expected AUTH_DENIED or CLAIM_DENIED; no golden expectations for remittance denial or appeal failure.
-- **CLI and other entrypoints:** Eval does not run via `rcm-agent process` (CLI + persistence); it calls the pipeline directly.
-
-To make the eval more comprehensive, consider: adding golden entries for all encounters (003, 005, 006); adding scenarios for AUTH_DENIED and CLAIM_DENIED; evaluating single-stage pipeline; optionally evaluating with RAG and HTTP backends; and adding crew-level or outcome-quality metrics.
 
 ## Interpreting Metrics
 
-- **Pipeline success rate:** High is good. Low may indicate escalation thresholds, mock backend behavior, or LLM variability.
+- **Pipeline success rate:** High is good. For failure scenarios (ENC-007, ENC-008), success = pipeline correctly produced the expected failure status.
 - **Router alignment:** High means pipeline stages match expectations; low may require routing rule or prompt tuning.
 - **Prior auth coverage:** Should be 1.0 for encounters with auth-required CPT codes (e.g. 73721, 70450).
 - **Claim readiness:** Fraction that reached claims submission; depends on prior stages completing successfully.
+- **Escalation alignment:** When golden has `expected_escalation: true`, success = pipeline correctly escalated (e.g. ENC-003).
+
+## Optional: RAG and HTTP backends
+
+**RAG:** Set `RCM_RAG_BACKEND=rag` and ensure Chroma index is available. Eval will use RAG for coding/prior-auth; report records whether RAG was used but does not include retrieval quality metrics.
+
+**HTTP backends:** To exercise the pipeline over HTTP:
+
+1. Start mock server: `rcm-agent serve-mock` (default port 8000)
+2. Run eval: `ELIGIBILITY_BACKEND=http PRIOR_AUTH_BACKEND=http CLAIMS_BACKEND=http rcm-agent eval-e2e -o reports/e2e_eval_http.json`
+
+This is optional and not part of default CI.
