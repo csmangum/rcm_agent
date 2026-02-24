@@ -36,7 +36,7 @@ class MultiStageRouterResult(BaseModel):
     reasoning: str
 
     @model_validator(mode="after")
-    def _stages_and_results_non_empty_and_equal_length(self) -> "MultiStageRouterResult":
+    def _stages_and_results_non_empty_and_equal_length(self) -> MultiStageRouterResult:
         if len(self.stages) != len(self.results) or len(self.stages) == 0:
             raise ValueError(
                 "MultiStageRouterResult requires len(stages) == len(results) > 0, "

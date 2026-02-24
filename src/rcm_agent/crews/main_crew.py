@@ -169,7 +169,7 @@ def process_encounter_multi_stage(
     outputs: list[EncounterOutput] = []
     accumulated_context: dict[str, Any] = dict(pipeline_context) if pipeline_context else {}
 
-    for i, (stage, stage_result) in enumerate(zip(multi_result.stages, multi_result.results), start=1):
+    for i, (stage, stage_result) in enumerate(zip(multi_result.stages, multi_result.results, strict=True), start=1):
         logger.info(
             "Multi-stage pipeline [%d/%d]: %s for %s",
             i,
