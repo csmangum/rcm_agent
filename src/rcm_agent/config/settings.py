@@ -59,13 +59,15 @@ def get_rag_config() -> dict[str, Any]:
 
 
 def get_integrations_config() -> dict[str, Any]:
-    """Eligibility and prior-auth backend selection; optional base URL for 'http' backend."""
+    """Eligibility, prior-auth, and claims backend selection; optional base URL for 'http' backend."""
     eligibility = (os.environ.get("ELIGIBILITY_BACKEND") or "mock").strip().lower()
     prior_auth = (os.environ.get("PRIOR_AUTH_BACKEND") or "mock").strip().lower()
+    claims = (os.environ.get("CLAIMS_BACKEND") or "mock").strip().lower()
     mock_server_url = (os.environ.get("RCM_MOCK_SERVER_URL") or "http://localhost:8000").strip().rstrip("/")
     return {
         "eligibility": eligibility,
         "prior_auth": prior_auth,
+        "claims": claims,
         "mock_server_url": mock_server_url,
     }
 

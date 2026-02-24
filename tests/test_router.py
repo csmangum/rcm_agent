@@ -168,11 +168,13 @@ def test_dispatch_to_crew_coding(encounter_001: Encounter) -> None:
     assert "suggested_codes" in output.raw_result
 
 
-def test_dispatch_to_crew_claims_submission_stub(encounter_001: Encounter) -> None:
-    """dispatch_to_crew with CLAIMS_SUBMISSION uses stub."""
+def test_dispatch_to_crew_claims_submission(encounter_001: Encounter) -> None:
+    """dispatch_to_crew with CLAIMS_SUBMISSION runs claims submission crew."""
     output = dispatch_to_crew(encounter_001, RcmStage.CLAIMS_SUBMISSION)
     assert output.stage == RcmStage.CLAIMS_SUBMISSION
-    assert output.raw_result.get("stub") is True
+    assert output.raw_result.get("stub") is not True
+    assert "claim_id" in output.raw_result
+    assert "assemble_clean_claim" in output.actions_taken
 
 
 def test_dispatch_to_crew_denial_appeal_crew(encounter_004: Encounter) -> None:

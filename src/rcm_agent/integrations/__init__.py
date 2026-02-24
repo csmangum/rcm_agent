@@ -1,9 +1,10 @@
 """Abstractions for external system integration (eligibility, prior auth, claims).
 
-Default implementations are mocks (EligibilityMock, PriorAuthMock). Swap via registry
-or future config (e.g. ELIGIBILITY_BACKEND, PRIOR_AUTH_BACKEND).
+Default implementations are mocks (EligibilityMock, PriorAuthMock, ClaimsMock).
+Swap via registry or config (ELIGIBILITY_BACKEND, PRIOR_AUTH_BACKEND, CLAIMS_BACKEND).
 """
 
+from rcm_agent.integrations.claims_mock import ClaimsMock
 from rcm_agent.integrations.claims_stub import ClaimsStub
 from rcm_agent.integrations.eligibility_mock import EligibilityMock
 from rcm_agent.integrations.eligibility_stub import EligibilityStub
@@ -15,6 +16,7 @@ from rcm_agent.integrations.protocols import (
     PriorAuthBackend,
 )
 from rcm_agent.integrations.registry import (
+    get_claims_backend,
     get_eligibility_backend,
     get_prior_auth_backend,
     reset_integration_backends,
@@ -22,6 +24,7 @@ from rcm_agent.integrations.registry import (
 
 __all__ = [
     "ClaimsBackend",
+    "ClaimsMock",
     "ClaimsStub",
     "EligibilityBackend",
     "EligibilityMock",
@@ -29,6 +32,7 @@ __all__ = [
     "PriorAuthBackend",
     "PriorAuthMock",
     "PriorAuthStub",
+    "get_claims_backend",
     "get_eligibility_backend",
     "get_prior_auth_backend",
     "reset_integration_backends",

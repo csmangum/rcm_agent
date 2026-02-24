@@ -1,4 +1,4 @@
-"""Stub implementation of ClaimsBackend for future coding/claims integration."""
+"""Stub implementation of ClaimsBackend. Returns placeholder responses only."""
 
 from typing import Any
 
@@ -9,6 +9,14 @@ _STUB_MESSAGE = "Claims backend not implemented; use a real adapter when availab
 
 class ClaimsStub:
     """Placeholder implementation of ClaimsBackend. Returns stub responses only."""
+
+    def scrub_claim(self, claim_payload: dict[str, Any]) -> dict[str, Any]:
+        out = stub_response("scrub_claim", _STUB_MESSAGE)
+        out["clean"] = True
+        out["errors"] = []
+        out["warnings"] = []
+        out["edit_actions"] = []
+        return out
 
     def submit_claim(self, claim_payload: dict[str, Any]) -> dict[str, Any]:
         out = stub_response("submit_claim", _STUB_MESSAGE)
