@@ -40,8 +40,8 @@ class ConnectionManager:
 
     @contextmanager
     def connection(self) -> Generator[sqlite3.Connection, None, None]:
-        """Yield a connection. On success the caller should commit explicitly;
-        on exception the transaction is rolled back automatically."""
+        """Yield a connection. For read-only use no commit is needed; for writes
+        the caller must commit. On exception the transaction is rolled back."""
         conn = self._get_connection()
         try:
             yield conn

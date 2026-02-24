@@ -15,7 +15,7 @@ from rcm_agent.config import (
     get_router_llm_config,
 )
 from rcm_agent.models import Encounter, RcmStage
-from rcm_agent.observability.logging import get_logger
+from rcm_agent.observability import get_logger
 
 logger = get_logger(__name__)
 

@@ -18,9 +18,19 @@ import logging
 import os
 import sys
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Protocol, cast
 
 _SETUP_DONE = False
+
+
+class StructuredLoggerProtocol(Protocol):
+    """Protocol for structured loggers that accept extra keyword arguments."""
+
+    def info(self, msg: str, *args: Any, **kwargs: Any) -> None: ...
+    def warning(self, msg: str, *args: Any, **kwargs: Any) -> None: ...
+    def debug(self, msg: str, *args: Any, **kwargs: Any) -> None: ...
+    def error(self, msg: str, *args: Any, **kwargs: Any) -> None: ...
+    def exception(self, msg: str, *args: Any, **kwargs: Any) -> None: ...
 
 
 class _JsonFormatter(logging.Formatter):
@@ -122,6 +132,6 @@ def reset_logging() -> None:
     _SETUP_DONE = False
 
 
-def get_logger(name: str) -> StructuredLogger:
+def get_logger(name: str) -> StructuredLoggerProtocol:
     """Return a StructuredLogger bound to *name*."""
-    return logging.getLogger(name)  # type: ignore[return-value]
+    return cast(StructuredLoggerProtocol, logging.getLogger(name))

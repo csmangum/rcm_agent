@@ -3,7 +3,7 @@
 import json
 
 from rcm_agent.models import Encounter, EncounterOutput, EncounterStatus, RcmStage
-from rcm_agent.observability.logging import get_logger
+from rcm_agent.observability import get_logger
 from rcm_agent.tools._types import DenialAnalysis
 from rcm_agent.tools.appeal import (
     assemble_appeal_packet,

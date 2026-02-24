@@ -27,9 +27,7 @@ _RETRYABLE_STATUS_CODES = {502, 503, 504}
 def _is_retryable(exc: BaseException) -> bool:
     if isinstance(exc, _RETRYABLE_HTTP_ERRORS):
         return True
-    if isinstance(exc, BackendError) and exc.status_code in _RETRYABLE_STATUS_CODES:
-        return True
-    return False
+    return isinstance(exc, BackendError) and exc.status_code in _RETRYABLE_STATUS_CODES
 
 
 def _retry_decorator():  # type: ignore[no-untyped-def]

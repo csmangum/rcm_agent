@@ -5,7 +5,7 @@ Drop-in async equivalents of the sync HTTP clients in ``http_clients.py``.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -41,10 +41,10 @@ class _AsyncBaseHttpClient:
             self._internal_client = None
 
     async def _get(self, path: str) -> dict[str, Any]:
-        return await self._request("GET", path)
+        return cast(dict[str, Any], await self._request("GET", path))
 
     async def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
-        return await self._request("POST", path, body=body)
+        return cast(dict[str, Any], await self._request("POST", path, body=body))
 
     @_retry_decorator()
     async def _request(self, method: str, path: str, *, body: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -53,8 +53,7 @@ class _AsyncBaseHttpClient:
         try:
             resp = await self._get_client().request(method, url, json=body)
             resp.raise_for_status()
-            result: dict[str, Any] = resp.json()
-            return result
+            return cast(dict[str, Any], resp.json())
         except httpx.HTTPStatusError as exc:
             raise BackendError(
                 f"{method} {url} returned {exc.response.status_code}",

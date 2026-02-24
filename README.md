@@ -31,6 +31,12 @@ cp .env.example .env
 - **Use the mock server as backend:** Set `ELIGIBILITY_BACKEND=http`, `PRIOR_AUTH_BACKEND=http`, and `RCM_MOCK_SERVER_URL=http://localhost:8000` (or the URL where the server is running). Tools and crews then call the server over HTTP.
 - **Swap backends later:** Set `ELIGIBILITY_BACKEND=fhir` or `PRIOR_AUTH_BACKEND=fhir` (or `edi`, etc.) once those adapters are added. The registry in `rcm_agent.integrations` chooses the implementation from config; crew and tool-call code stays unchanged.
 
+### Observability
+
+- **Log format:** `RCM_AGENT_LOG_FORMAT` — `human` (default) for readable output, `json` for one-JSON-object-per-line (e.g. for log aggregators).
+- **Log level:** `RCM_AGENT_LOG_LEVEL` — default `INFO`; set to `DEBUG` for noisier logs.
+- **Structured fields:** Pipeline logs include `encounter_id`, `stage`, and `action` (and often `result`) so runs can be filtered and debugged by encounter and workflow step.
+
 ## Usage
 
 ```bash

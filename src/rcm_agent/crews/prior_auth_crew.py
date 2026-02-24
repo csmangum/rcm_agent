@@ -3,7 +3,7 @@
 import json
 
 from rcm_agent.models import Encounter, EncounterOutput, EncounterStatus, RcmStage
-from rcm_agent.observability.logging import get_logger
+from rcm_agent.observability import get_logger
 from rcm_agent.rag import get_payer_policy_backend
 from rcm_agent.tools.prior_auth import (
     assemble_auth_packet,

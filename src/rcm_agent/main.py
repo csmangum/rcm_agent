@@ -65,15 +65,15 @@ def process(ctx: click.Context, encounter_file: str) -> None:
     except ValidationError as e:
         click.echo(str(e), err=True)
         raise SystemExit(1) from None
-    repo = _repo(ctx)
 
-    repo.save_encounter(encounter, RcmStage.INTAKE, EncounterStatus.PENDING)
-    repo.update_status(
-        encounter.encounter_id,
-        EncounterStatus.PROCESSING,
-        "process_started",
-        details="Router and pipeline started",
-    )
+    with _repo(ctx) as repo:
+        repo.save_encounter(encounter, RcmStage.INTAKE, EncounterStatus.PENDING)
+        repo.update_status(
+            encounter.encounter_id,
+            EncounterStatus.PROCESSING,
+            "process_started",
+            details="Router and pipeline started",
+        )
 
     try:
         output = process_encounter(encounter)
@@ -81,35 +81,36 @@ def process(ctx: click.Context, encounter_file: str) -> None:
         click.echo(f"Pipeline error for {encounter.encounter_id}: {e}", err=True)
         raise SystemExit(1) from None
 
-    repo.update_status(
-        encounter.encounter_id,
-        output.status,
-        "workflow_complete",
-        new_stage=output.stage,
-        details=output.message,
-    )
-    router_output = {
-        "stage": output.stage.value,
-        "confidence": output.raw_result.get("router_confidence"),
-        "reasoning": output.raw_result.get("router_reasoning") or "",
-        "escalation_reasons": output.raw_result.get("escalation_reasons"),
-    }
-    repo.save_workflow_run(
-        encounter.encounter_id,
-        output.stage,
-        router_output,
-        output.model_dump(),
-    )
-
-    if output.stage == RcmStage.DENIAL_APPEAL and output.raw_result:
-        repo.save_denial_event(
-            encounter_id=encounter.encounter_id,
-            reason_codes=output.raw_result.get("reason_codes") or [],
-            denial_type=output.raw_result.get("denial_type") or "clinical",
-            appeal_viable=output.raw_result.get("appeal_viable", False),
-            claim_id=output.raw_result.get("claim_id"),
-            payer=encounter.insurance.payer,
+    with _repo(ctx) as repo:
+        repo.update_status(
+            encounter.encounter_id,
+            output.status,
+            "workflow_complete",
+            new_stage=output.stage,
+            details=output.message,
         )
+        router_output = {
+            "stage": output.stage.value,
+            "confidence": output.raw_result.get("router_confidence"),
+            "reasoning": output.raw_result.get("router_reasoning") or "",
+            "escalation_reasons": output.raw_result.get("escalation_reasons"),
+        }
+        repo.save_workflow_run(
+            encounter.encounter_id,
+            output.stage,
+            router_output,
+            output.model_dump(),
+        )
+
+        if output.stage == RcmStage.DENIAL_APPEAL and output.raw_result:
+            repo.save_denial_event(
+                encounter_id=encounter.encounter_id,
+                reason_codes=output.raw_result.get("reason_codes") or [],
+                denial_type=output.raw_result.get("denial_type") or "clinical",
+                appeal_viable=output.raw_result.get("appeal_viable", False),
+                claim_id=output.raw_result.get("claim_id"),
+                payer=encounter.insurance.payer,
+            )
 
     click.echo(f"Encounter {encounter.encounter_id}: stage={output.stage.value}, status={output.status.value}")
     click.echo(output.message)
@@ -120,8 +121,8 @@ def process(ctx: click.Context, encounter_file: str) -> None:
 @click.pass_context
 def status(ctx: click.Context, encounter_id: str) -> None:
     """Get current status for an encounter."""
-    repo = _repo(ctx)
-    row = repo.get_encounter(encounter_id)
+    with _repo(ctx) as repo:
+        row = repo.get_encounter(encounter_id)
     if not row:
         click.echo(f"Encounter {encounter_id} not found.", err=True)
         raise SystemExit(1)
@@ -136,11 +137,11 @@ def status(ctx: click.Context, encounter_id: str) -> None:
 @click.pass_context
 def history(ctx: click.Context, encounter_id: str) -> None:
     """Get audit trail for an encounter."""
-    repo = _repo(ctx)
-    if repo.get_encounter(encounter_id) is None:
-        click.echo(f"Encounter {encounter_id} not found.", err=True)
-        raise SystemExit(1)
-    entries = repo.get_audit_log(encounter_id)
+    with _repo(ctx) as repo:
+        if repo.get_encounter(encounter_id) is None:
+            click.echo(f"Encounter {encounter_id} not found.", err=True)
+            raise SystemExit(1)
+        entries = repo.get_audit_log(encounter_id)
     if not entries:
         click.echo("No audit log entries.")
         return
@@ -152,8 +153,8 @@ def history(ctx: click.Context, encounter_id: str) -> None:
 @click.pass_context
 def metrics(ctx: click.Context) -> None:
     """Show aggregate metrics (clean rate, escalation %, turnaround)."""
-    repo = _repo(ctx)
-    m = repo.get_metrics()
+    with _repo(ctx) as repo:
+        m = repo.get_metrics()
     total = m["total"]
     click.echo(f"Total encounters: {total}")
     click.echo(f"Clean rate:       {m['clean_rate_pct']:.1f}% ({m['clean_count']})")
@@ -199,8 +200,8 @@ def serve_mock(host: str, port: int) -> None:
 @click.pass_context
 def denial_stats(ctx: click.Context) -> None:
     """Show denial analytics (reason codes, denial type, payer)."""
-    repo = _repo(ctx)
-    stats = repo.get_denial_stats()
+    with _repo(ctx) as repo:
+        stats = repo.get_denial_stats()
     click.echo(f"Total denial events: {stats['total']}")
     click.echo(f"Appeal viable: {stats['appeal_viable_count']}")
     click.echo("By reason code:")

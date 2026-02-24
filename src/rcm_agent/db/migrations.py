@@ -14,7 +14,7 @@ import sqlite3
 from typing import NamedTuple
 
 from rcm_agent.exceptions import MigrationError
-from rcm_agent.observability.logging import get_logger
+from rcm_agent.observability import get_logger
 
 logger = get_logger(__name__)
 
@@ -25,6 +25,7 @@ class Migration(NamedTuple):
     sql: str
 
 
+# Append new Migration(version=N+1, description="...", sql="...") here.
 MIGRATIONS: list[Migration] = [
     Migration(
         version=1,

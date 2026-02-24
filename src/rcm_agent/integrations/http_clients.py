@@ -6,7 +6,7 @@ Set ELIGIBILITY_BACKEND=http, PRIOR_AUTH_BACKEND=http, CLAIMS_BACKEND=http with 
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -28,10 +28,10 @@ class _BaseHttpClient:
         self._client = client
 
     def _get(self, path: str) -> dict[str, Any]:
-        return self._request("GET", path)
+        return cast(dict[str, Any], self._request("GET", path))
 
     def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
-        return self._request("POST", path, body=body)
+        return cast(dict[str, Any], self._request("POST", path, body=body))
 
     @_retry_decorator()
     def _request(self, method: str, path: str, *, body: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -44,8 +44,7 @@ class _BaseHttpClient:
                 with httpx.Client(timeout=30.0) as c:
                     resp = c.request(method, url, json=body)
             resp.raise_for_status()
-            result: dict[str, Any] = resp.json()
-            return result
+            return cast(dict[str, Any], resp.json())
         except httpx.HTTPStatusError as exc:
             raise BackendError(
                 f"{method} {url} returned {exc.response.status_code}",

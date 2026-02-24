@@ -27,7 +27,7 @@ from rcm_agent.models import (
     PipelineContext,
     RcmStage,
 )
-from rcm_agent.observability.logging import get_logger
+from rcm_agent.observability import get_logger
 from rcm_agent.tools.logic import check_escalation
 
 logger = get_logger(__name__)

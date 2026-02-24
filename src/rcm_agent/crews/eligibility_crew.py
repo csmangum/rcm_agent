@@ -1,7 +1,7 @@
 """Eligibility verification crew: orchestrate eligibility tools and return EncounterOutput."""
 
 from rcm_agent.models import Encounter, EncounterOutput, EncounterStatus, RcmStage
-from rcm_agent.observability.logging import get_logger
+from rcm_agent.observability import get_logger
 from rcm_agent.tools.eligibility import (
     check_coordination_of_benefits,
     check_member_eligibility,
