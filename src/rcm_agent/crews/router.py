@@ -7,7 +7,7 @@ import logging
 import os
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from rcm_agent.config import (
     get_auth_required_procedures,
@@ -163,7 +163,7 @@ Procedures: {proc_str}
 Diagnoses: {diag_str}
 Clinical Notes: {encounter.clinical_notes}
 Denial Info: {denial_str}
-Documents: {', '.join(encounter.documents) if encounter.documents else 'none'}
+Documents: {", ".join(encounter.documents) if encounter.documents else "none"}
 """
 
 
@@ -172,7 +172,7 @@ def _parse_llm_response(raw_text: str) -> list[dict[str, Any]]:
     text = raw_text.strip()
     if text.startswith("```"):
         lines = text.split("\n")
-        lines = [l for l in lines if not l.strip().startswith("```")]
+        lines = [ln for ln in lines if not ln.strip().startswith("```")]
         text = "\n".join(lines)
     try:
         parsed = json.loads(text)

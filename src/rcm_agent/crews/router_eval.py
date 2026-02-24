@@ -18,7 +18,7 @@ from rcm_agent.crews.router import (
     classify_encounter_multi_stage,
     llm_classify_encounter,
 )
-from rcm_agent.models import Encounter, RcmStage
+from rcm_agent.models import Encounter
 
 logger = logging.getLogger(__name__)
 
@@ -133,14 +133,9 @@ def evaluate_encounter(encounter: Encounter) -> EvalRecord:
             f"DISAGREEMENT: heuristic={heuristic.stage.value}({heuristic.confidence:.2f}) "
             f"vs llm={llm_primary_stage}({llm_result.primary_confidence:.2f})"
         )
-        logger.warning(
-            "Router eval disagreement for %s: %s", encounter.encounter_id, notes
-        )
+        logger.warning("Router eval disagreement for %s: %s", encounter.encounter_id, notes)
     if not agrees_multi:
-        multi_note = (
-            f"MULTI-STAGE DISAGREEMENT: heuristic={sorted(h_set)} "
-            f"vs llm={sorted(l_set)}"
-        )
+        multi_note = f"MULTI-STAGE DISAGREEMENT: heuristic={sorted(h_set)} vs llm={sorted(l_set)}"
         if notes:
             notes += "; " + multi_note
         else:

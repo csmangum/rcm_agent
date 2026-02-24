@@ -3,7 +3,7 @@
     "icd_codes": [],
     "cpt_codes": [],
     "confidence": 0.5,
-    "message": "No keyword match for encounter type office_visit; manual review recommended."
+    "message": "No keyword match for encounter type EncounterType.office_visit; manual review recommended."
   },
   "coding_guidelines_snippets": [
     "No guideline snippet on file; refer to current CPT/ICD-10 guidelines."
