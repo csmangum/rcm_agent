@@ -1,5 +1,6 @@
 """Unit tests for config/settings."""
 
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -7,10 +8,14 @@ import pytest
 from rcm_agent.config import (
     EscalationConfig,
     get_auth_required_procedures,
+    get_cpt_charge_amounts,
+    get_default_charge,
     get_escalation_config,
     get_payer_config,
     get_rag_config,
+    reload_routing_rules,
 )
+from rcm_agent.config.settings import _load_routing_rules
 
 
 def test_get_escalation_config_returns_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -106,3 +111,60 @@ def test_get_rag_config_invalid_backend_falls_back_to_mock(monkeypatch: pytest.M
     monkeypatch.setenv("RCM_RAG_BACKEND", "invalid")
     config = get_rag_config()
     assert config["backend"] == "mock"
+
+
+def test_get_cpt_charge_amounts_returns_dict_with_expected_keys() -> None:
+    """get_cpt_charge_amounts returns dict with expected CPT codes (from YAML or fallback)."""
+    amounts = get_cpt_charge_amounts()
+    assert isinstance(amounts, dict)
+    assert "99213" in amounts
+    assert "73721" in amounts
+    assert all(isinstance(v, (int, float)) for v in amounts.values())
+
+
+def test_get_default_charge_returns_float() -> None:
+    """get_default_charge returns a float (from YAML or 200.0 fallback)."""
+    charge = get_default_charge()
+    assert isinstance(charge, (int, float))
+    assert charge == 200.0 or charge > 0
+
+
+def test_reload_routing_rules_returns_empty_when_yaml_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When routing_rules.yaml path points to missing file, load returns {} and getters use fallbacks."""
+    monkeypatch.setattr(
+        "rcm_agent.config.settings._ROUTING_RULES_PATH",
+        Path("/nonexistent/routing_rules.yaml"),
+    )
+    _load_routing_rules.cache_clear()
+    try:
+        rules = reload_routing_rules()
+        assert rules == {}
+        amounts = get_cpt_charge_amounts()
+        assert "99213" in amounts
+        assert amounts["99213"] == 150.0
+        assert get_default_charge() == 200.0
+    finally:
+        _load_routing_rules.cache_clear()
+        # Restore default path so other tests see real YAML
+        monkeypatch.undo()
+        _load_routing_rules.cache_clear()
+
+
+def test_reload_routing_rules_returns_empty_when_yaml_malformed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When routing_rules.yaml is malformed, load returns {} and getters use fallbacks."""
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        f.write("invalid: yaml: [[[")
+        bad_path = Path(f.name)
+    try:
+        monkeypatch.setattr("rcm_agent.config.settings._ROUTING_RULES_PATH", bad_path)
+        _load_routing_rules.cache_clear()
+        rules = reload_routing_rules()
+        assert rules == {}
+        amounts = get_cpt_charge_amounts()
+        assert "99213" in amounts
+        assert get_default_charge() == 200.0
+    finally:
+        bad_path.unlink(missing_ok=True)
+        _load_routing_rules.cache_clear()
+        monkeypatch.undo()
+        _load_routing_rules.cache_clear()

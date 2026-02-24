@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from rcm_agent.config import CPT_CHARGE_AMOUNTS, DEFAULT_CHARGE
+from rcm_agent.config import get_cpt_charge_amounts, get_default_charge
 from rcm_agent.integrations.registry import get_claims_backend
 from rcm_agent.models import Encounter, EncounterType
 from rcm_agent.tools._types import (
@@ -61,7 +61,7 @@ def assemble_clean_claim(
     line_items: list[ClaimLineItem] = []
     total_charges = 0.0
     for idx, cpt in enumerate(cpt_codes, start=1):
-        charge = CPT_CHARGE_AMOUNTS.get(cpt, DEFAULT_CHARGE)
+        charge = get_cpt_charge_amounts().get(cpt, get_default_charge())
         total_charges += charge
         line_mods: list[str] = []
         if cpt == "99223" and "57" in modifiers:

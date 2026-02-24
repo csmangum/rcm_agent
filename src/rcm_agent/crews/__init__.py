@@ -3,15 +3,24 @@
 from rcm_agent.crews.coding_crew import run_coding_crew
 from rcm_agent.crews.denial_appeal_crew import run_denial_appeal_crew
 from rcm_agent.crews.eligibility_crew import run_eligibility_crew
-from rcm_agent.crews.main_crew import dispatch_to_crew, process_encounter
+from rcm_agent.crews.main_crew import dispatch_to_crew, process_encounter, process_encounter_multi_stage
 from rcm_agent.crews.prior_auth_crew import run_prior_auth_crew
-from rcm_agent.crews.router import route_encounter
+from rcm_agent.crews.router import (
+    MultiStageRouterResult,
+    classify_encounter_multi_stage,
+    route_encounter,
+    route_encounter_multi_stage,
+)
 from rcm_agent.crews.stub import run_stub_crew
 
 __all__ = [
+    "MultiStageRouterResult",
+    "classify_encounter_multi_stage",
     "dispatch_to_crew",
     "process_encounter",
+    "process_encounter_multi_stage",
     "route_encounter",
+    "route_encounter_multi_stage",
     "run_coding_crew",
     "run_denial_appeal_crew",
     "run_eligibility_crew",
