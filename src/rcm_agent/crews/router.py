@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import os
 from typing import Any
 
@@ -15,9 +14,11 @@ from rcm_agent.config import (
     get_multi_stage_sequences,
     get_router_llm_config,
 )
+from rcm_agent.exceptions import RoutingError
 from rcm_agent.models import Encounter, RcmStage
+from rcm_agent.observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class RouterResult(BaseModel):
@@ -77,44 +78,47 @@ def classify_encounter(encounter: Encounter) -> RouterResult:
     denial_kw = keywords.get("denial_appeal", [])
     eligibility_kw = keywords.get("eligibility", [])
 
+    def _result(stage: RcmStage, confidence: float, reasoning: str) -> RouterResult:
+        logger.info(
+            "Router classification",
+            encounter_id=encounter.encounter_id,
+            stage=stage.value,
+            action="heuristic_classify",
+            confidence=confidence,
+            reasoning=reasoning,
+        )
+        return RouterResult(stage=stage, confidence=confidence, reasoning=reasoning)
+
     if encounter.denial_info is not None:
-        return RouterResult(
-            stage=RcmStage.DENIAL_APPEAL,
-            confidence=1.0,
-            reasoning="Structured denial_info present; route to denial/appeal.",
-        )
+        return _result(RcmStage.DENIAL_APPEAL, 1.0, "Structured denial_info present; route to denial/appeal.")
     if any(kw in notes_lower for kw in denial_kw):
-        return RouterResult(
-            stage=RcmStage.DENIAL_APPEAL,
-            confidence=1.0,
-            reasoning="Clinical notes mention denial or appeal; route to denial/appeal.",
-        )
+        return _result(RcmStage.DENIAL_APPEAL, 1.0, "Clinical notes mention denial or appeal; route to denial/appeal.")
 
     if any(kw in notes_lower for kw in eligibility_kw):
-        return RouterResult(
-            stage=RcmStage.ELIGIBILITY_VERIFICATION,
-            confidence=1.0,
-            reasoning="Notes indicate eligibility or coverage issues; route to eligibility verification.",
+        return _result(
+            RcmStage.ELIGIBILITY_VERIFICATION,
+            1.0,
+            "Notes indicate eligibility or coverage issues; route to eligibility verification.",
         )
 
     if procedure_codes & auth_cpt:
-        return RouterResult(
-            stage=RcmStage.PRIOR_AUTHORIZATION,
-            confidence=1.0,
-            reasoning=f"Procedure code(s) {sorted(procedure_codes & auth_cpt)} require prior auth; route to prior authorization.",
+        return _result(
+            RcmStage.PRIOR_AUTHORIZATION,
+            1.0,
+            f"Procedure code(s) {sorted(procedure_codes & auth_cpt)} require prior auth; route to prior authorization.",
         )
 
     if encounter.procedures and encounter.diagnoses:
-        return RouterResult(
-            stage=RcmStage.CODING_CHARGE_CAPTURE,
-            confidence=0.95,
-            reasoning="Procedures and diagnoses present; route to coding/charge capture.",
+        return _result(
+            RcmStage.CODING_CHARGE_CAPTURE,
+            0.95,
+            "Procedures and diagnoses present; route to coding/charge capture.",
         )
 
-    return RouterResult(
-        stage=RcmStage.CODING_CHARGE_CAPTURE,
-        confidence=0.7,
-        reasoning="Default to coding/charge capture; incomplete or ambiguous encounter data.",
+    return _result(
+        RcmStage.CODING_CHARGE_CAPTURE,
+        0.7,
+        "Default to coding/charge capture; incomplete or ambiguous encounter data.",
     )
 
 
