@@ -3,6 +3,7 @@
 import json
 
 from rcm_agent.models import Encounter, EncounterOutput, EncounterStatus, RcmStage
+from rcm_agent.tools._types import DenialAnalysis
 from rcm_agent.tools.appeal import (
     assemble_appeal_packet,
     generate_appeal_letter,
@@ -33,12 +34,12 @@ def run_denial_appeal_crew(encounter: Encounter) -> EncounterOutput:
         reason_codes, encounter
     )
 
-    denial_analysis = {
-        "reason_codes": reason_codes,
-        "denial_type": denial_type,
-        "appeal_viable": appeal_viable,
-        "viability_summary": viability_summary,
-    }
+    denial_analysis = DenialAnalysis(
+        reason_codes=reason_codes,
+        denial_type=denial_type,
+        appeal_viable=appeal_viable,
+        viability_summary=viability_summary,
+    )
 
     claim_id = encounter.denial_info.claim_id if encounter.denial_info else None
     raw_result = {

@@ -5,6 +5,12 @@ from typing import Any, Callable
 
 from rcm_agent.integrations.registry import get_prior_auth_backend
 from rcm_agent.models import Encounter
+from rcm_agent.tools._types import (
+    AuthPacket,
+    AuthStatusResult,
+    AuthSubmitResult,
+    ClinicalIndicatorsResult,
+)
 
 
 # Keywords/phrases that indicate medical necessity and clinical indicators (heuristic extraction).
@@ -34,7 +40,7 @@ _MOCK_POLICY_SNIPPETS: dict[tuple[str, str], list[str]] = {
 }
 
 
-def extract_clinical_indicators(clinical_notes: str) -> dict[str, Any]:
+def extract_clinical_indicators(clinical_notes: str) -> ClinicalIndicatorsResult:
     """
     Keyword/regex extraction of diagnoses, symptoms, failed treatments, medical necessity indicators.
     Heuristic default; no LLM needed for POC.
@@ -43,12 +49,12 @@ def extract_clinical_indicators(clinical_notes: str) -> dict[str, Any]:
     diagnoses = list(set(_DIAGNOSIS_PATTERN.findall(clinical_notes or "")))
     symptoms = [s for s in _SYMPTOM_KEYWORDS if s in notes_lower]
     medical_necessity = [k for k in _MEDICAL_NECESSITY_KEYWORDS if k in notes_lower]
-    return {
-        "diagnoses": diagnoses,
-        "symptoms": symptoms,
-        "medical_necessity_indicators": medical_necessity,
-        "summary": f"Extracted {len(diagnoses)} diagnosis codes, {len(symptoms)} symptoms, {len(medical_necessity)} necessity indicators.",
-    }
+    return ClinicalIndicatorsResult(
+        diagnoses=diagnoses,
+        symptoms=symptoms,
+        medical_necessity_indicators=medical_necessity,
+        summary=f"Extracted {len(diagnoses)} diagnosis codes, {len(symptoms)} symptoms, {len(medical_necessity)} necessity indicators.",
+    )
 
 
 def search_payer_policies(
@@ -68,36 +74,49 @@ def search_payer_policies(
 
 def assemble_auth_packet(
     encounter: Encounter,
-    clinical_indicators: dict[str, Any],
+    clinical_indicators: ClinicalIndicatorsResult,
     policy_matches: dict[str, list[str]],
-) -> dict[str, Any]:
+) -> AuthPacket:
     """
     Assemble structured prior auth request: patient info, procedure, clinical justification, policy refs.
     """
     notes_excerpt = (encounter.clinical_notes or "")[:500]
     summary = clinical_indicators.get("summary", "")
     clinical_justification = (summary + " " + notes_excerpt).strip() or "No clinical justification extracted."
-    return {
-        "encounter_id": encounter.encounter_id,
-        "patient": encounter.patient.model_dump(),
-        "payer": encounter.insurance.payer,
-        "member_id": encounter.insurance.member_id,
-        "date_of_service": encounter.date,
-        "procedure_codes": [p.code for p in encounter.procedures],
-        "procedure_descriptions": [p.description for p in encounter.procedures],
-        "diagnoses": [d.code for d in encounter.diagnoses],
-        "clinical_indicators": clinical_indicators,
-        "clinical_justification": clinical_justification,
-        "policy_references": policy_matches,
-        "clinical_notes_excerpt": notes_excerpt,
-    }
+    return AuthPacket(
+        encounter_id=encounter.encounter_id,
+        patient=encounter.patient.model_dump(),
+        payer=encounter.insurance.payer,
+        member_id=encounter.insurance.member_id,
+        date_of_service=encounter.date,
+        procedure_codes=[p.code for p in encounter.procedures],
+        procedure_descriptions=[p.description for p in encounter.procedures],
+        diagnoses=[d.code for d in encounter.diagnoses],
+        clinical_indicators=clinical_indicators,
+        clinical_justification=clinical_justification,
+        policy_references=policy_matches,
+        clinical_notes_excerpt=notes_excerpt,
+    )
 
 
-def submit_auth_request(auth_packet: dict[str, Any]) -> dict[str, Any]:
+def submit_auth_request(auth_packet: dict[str, Any]) -> AuthSubmitResult:
     """Submit prior auth request via configured backend."""
-    return get_prior_auth_backend().submit_auth_request(auth_packet)
+    result: dict[str, Any] = get_prior_auth_backend().submit_auth_request(auth_packet)
+    return AuthSubmitResult(
+        auth_id=result["auth_id"],
+        status=result["status"],
+        submitted_at=result["submitted_at"],
+        message=result.get("message", ""),
+    )
 
 
-def poll_auth_status(auth_id: str) -> dict[str, Any]:
+def poll_auth_status(auth_id: str) -> AuthStatusResult:
     """Poll prior auth status via configured backend."""
-    return get_prior_auth_backend().poll_auth_status(auth_id)
+    result: dict[str, Any] = get_prior_auth_backend().poll_auth_status(auth_id)
+    return AuthStatusResult(
+        auth_id=result["auth_id"],
+        status=result["status"],
+        decision=result.get("decision"),
+        decision_date=result.get("decision_date"),
+        message=result.get("message", ""),
+    )

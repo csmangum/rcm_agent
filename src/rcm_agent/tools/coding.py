@@ -3,6 +3,12 @@
 from typing import Any, Callable
 
 from rcm_agent.models import Encounter, EncounterType
+from rcm_agent.tools._types import (
+    MissingChargesResult,
+    ReimbursementResult,
+    SuggestCodesResult,
+    ValidateCodesResult,
+)
 
 # Keyword -> (ICD-10, CPT) suggestions for heuristic code suggestion. Subset for synthetic encounters.
 _CLINICAL_TERM_TO_CODES: dict[str, list[tuple[str, str, str]]] = {
@@ -67,7 +73,7 @@ def suggest_codes(
     clinical_notes: str,
     encounter_type: str | EncounterType,
     existing_codes: dict[str, list[str]] | None = None,
-) -> dict[str, Any]:
+) -> SuggestCodesResult:
     """
     Keyword-based ICD-10/CPT suggestion from clinical narrative.
     Returns suggested ICD-10-CM and CPT codes with confidence scores.
@@ -90,29 +96,28 @@ def suggest_codes(
                 suggested_cpt.append({"code": cpt, "description": desc, "confidence": 0.85})
                 seen_cpt.add(cpt)
 
-    # If no hits, return empty with low confidence
-    if not suggested_icd and not suggested_cpt:
-        encounter_str = encounter_type if isinstance(encounter_type, str) else getattr(encounter_type, "value", str(encounter_type))
-        return {
-            "icd_codes": [],
-            "cpt_codes": [],
-            "confidence": 0.5,
-            "message": f"No keyword match for encounter type {encounter_str}; manual review recommended.",
-        }
-
     encounter_str = encounter_type if isinstance(encounter_type, str) else getattr(encounter_type, "value", str(encounter_type))
-    return {
-        "icd_codes": suggested_icd,
-        "cpt_codes": suggested_cpt,
-        "confidence": 0.85 if (suggested_icd or suggested_cpt) else 0.5,
-        "message": f"Suggested {len(suggested_icd)} ICD code(s), {len(suggested_cpt)} CPT code(s) for encounter type {encounter_str}.",
-    }
+
+    if not suggested_icd and not suggested_cpt:
+        return SuggestCodesResult(
+            icd_codes=[],
+            cpt_codes=[],
+            confidence=0.5,
+            message=f"No keyword match for encounter type {encounter_str}; manual review recommended.",
+        )
+
+    return SuggestCodesResult(
+        icd_codes=suggested_icd,
+        cpt_codes=suggested_cpt,
+        confidence=0.85 if (suggested_icd or suggested_cpt) else 0.5,
+        message=f"Suggested {len(suggested_icd)} ICD code(s), {len(suggested_cpt)} CPT code(s) for encounter type {encounter_str}.",
+    )
 
 
 def validate_code_combinations(
     icd_codes: list[str],
     cpt_codes: list[str],
-) -> dict[str, Any]:
+) -> ValidateCodesResult:
     """
     Check against hardcoded NCCI edit subset. Return valid/invalid pairs and modifier suggestions.
     """
@@ -130,11 +135,11 @@ def validate_code_combinations(
                 elif mod:
                     modifier_suggestions.append({"cpt": key2, "modifier": mod, "reason": "Same-day procedure with E&M."})
 
-    return {
-        "valid": len(invalid_pairs) == 0,
-        "invalid_pairs": invalid_pairs,
-        "modifier_suggestions": modifier_suggestions,
-    }
+    return ValidateCodesResult(
+        valid=len(invalid_pairs) == 0,
+        invalid_pairs=invalid_pairs,
+        modifier_suggestions=modifier_suggestions,
+    )
 
 
 def _cpt_codes_to_set(cpt_codes: list[Any]) -> set[str]:
@@ -150,9 +155,9 @@ def _cpt_codes_to_set(cpt_codes: list[Any]) -> set[str]:
 
 def identify_missing_charges(
     encounter: Encounter,
-    suggested_codes: dict[str, Any],
+    suggested_codes: SuggestCodesResult,
     effective_cpt_codes: list[str] | None = None,
-) -> dict[str, Any]:
+) -> MissingChargesResult:
     """
     Compare documented procedures to suggested/coded procedures; flag missing modifiers and missing codes.
     When effective_cpt_codes is provided (e.g. from crew after merging suggestion with existing), use it
@@ -175,17 +180,16 @@ def identify_missing_charges(
         else:
             flags.append(f"Suggested codes with no documented procedure: {sorted(extra_suggested)}")
 
-    # Modifier check: 27130 + 99223 often needs 57
     cpt_list = list(documented_cpts) + list(suggested_cpts)
     if "27130" in cpt_list and "99223" in cpt_list:
         flags.append("Consider modifier 57 for same-day E&M with major procedure.")
 
-    return {
-        "missing_codes": list(missing_codes),
-        "missing_charge_flags": flags,
-        "documented_procedures": list(documented_cpts),
-        "suggested_cpts": list(suggested_cpts),
-    }
+    return MissingChargesResult(
+        missing_codes=list(missing_codes),
+        missing_charge_flags=flags,
+        documented_procedures=list(documented_cpts),
+        suggested_cpts=list(suggested_cpts),
+    )
 
 
 def search_coding_guidelines(
@@ -244,7 +248,7 @@ def search_cms_requirements(
     return ["No CMS requirement snippet on file for this topic; refer to CMS manuals and MAC guidance."]
 
 
-def calculate_expected_reimbursement(cpt_codes: list[str], payer: str) -> dict[str, Any]:
+def calculate_expected_reimbursement(cpt_codes: list[str], payer: str) -> ReimbursementResult:
     """
     Lookup hardcoded fee schedule. Return per-code and total expected reimbursement.
     """
@@ -258,8 +262,8 @@ def calculate_expected_reimbursement(cpt_codes: list[str], payer: str) -> dict[s
             amount = _DEFAULT_FEE
         per_code.append({"cpt_code": code, "expected_amount": amount})
         total += amount
-    return {
-        "payer": payer,
-        "per_code": per_code,
-        "total_expected": total,
-    }
+    return ReimbursementResult(
+        payer=payer,
+        per_code=per_code,
+        total_expected=total,
+    )

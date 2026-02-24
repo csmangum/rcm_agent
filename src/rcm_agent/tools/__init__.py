@@ -1,5 +1,26 @@
 """CrewAI tools for RCM workflows."""
 
+from rcm_agent.tools._types import (
+    AppealPacket,
+    AuthPacket,
+    AuthStatusResult,
+    AuthSubmitResult,
+    BenefitsResult,
+    ClinicalIndicatorsResult,
+    CoordinationOfBenefitsResult,
+    DenialAnalysis,
+    DenialSummary,
+    EligibilityResult,
+    InvalidPair,
+    MissingChargesResult,
+    ModifierSuggestion,
+    PerCodeReimbursement,
+    ProcedureBenefit,
+    ReimbursementResult,
+    SuggestCodesResult,
+    SuggestedCode,
+    ValidateCodesResult,
+)
 from rcm_agent.tools.appeal import (
     assemble_appeal_packet,
     generate_appeal_letter,
@@ -14,18 +35,18 @@ from rcm_agent.tools.coding import (
     suggest_codes,
     validate_code_combinations,
 )
-from rcm_agent.tools.eligibility import (
-    check_coordination_of_benefits,
-    check_member_eligibility,
-    flag_coverage_gaps,
-    verify_benefits,
-)
 from rcm_agent.tools.denial import (
     DENIAL_REASON_CODE_CATALOG,
     DenialType,
     assess_appeal_viability,
     classify_denial_type,
     parse_denial_reason_codes,
+)
+from rcm_agent.tools.eligibility import (
+    check_coordination_of_benefits,
+    check_member_eligibility,
+    flag_coverage_gaps,
+    verify_benefits,
 )
 from rcm_agent.tools.logic import check_escalation
 from rcm_agent.tools.prior_auth import (
@@ -37,29 +58,49 @@ from rcm_agent.tools.prior_auth import (
 )
 
 __all__ = [
+    # TypedDict types
+    "AppealPacket",
+    "AuthPacket",
+    "AuthStatusResult",
+    "AuthSubmitResult",
+    "BenefitsResult",
+    "ClinicalIndicatorsResult",
+    "CoordinationOfBenefitsResult",
+    "DenialAnalysis",
+    "DenialSummary",
+    "EligibilityResult",
+    "InvalidPair",
+    "MissingChargesResult",
+    "ModifierSuggestion",
+    "PerCodeReimbursement",
+    "ProcedureBenefit",
+    "ReimbursementResult",
+    "SuggestCodesResult",
+    "SuggestedCode",
+    "ValidateCodesResult",
+    # Functions
     "assemble_appeal_packet",
     "assess_appeal_viability",
-    "classify_denial_type",
+    "calculate_expected_reimbursement",
+    "check_coordination_of_benefits",
     "check_escalation",
+    "check_member_eligibility",
+    "classify_denial_type",
     "DENIAL_REASON_CODE_CATALOG",
     "DenialType",
-    "generate_appeal_letter",
-    "parse_denial_reason_codes",
-    "search_payer_policies_for_appeal",
-    "check_member_eligibility",
-    "verify_benefits",
-    "check_coordination_of_benefits",
-    "flag_coverage_gaps",
     "extract_clinical_indicators",
-    "search_payer_policies",
-    "assemble_auth_packet",
-    "submit_auth_request",
-    "poll_auth_status",
-    "suggest_codes",
-    "validate_code_combinations",
+    "flag_coverage_gaps",
+    "generate_appeal_letter",
     "identify_missing_charges",
+    "parse_denial_reason_codes",
+    "poll_auth_status",
+    "search_cms_requirements",
     "search_coding_guidelines",
     "search_ncci_edits",
-    "search_cms_requirements",
-    "calculate_expected_reimbursement",
+    "search_payer_policies_for_appeal",
+    "search_payer_policies",
+    "submit_auth_request",
+    "suggest_codes",
+    "validate_code_combinations",
+    "verify_benefits",
 ]
