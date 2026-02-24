@@ -151,19 +151,23 @@ def test_registry_explicit_mock_via_env(monkeypatch):
 
 
 def test_registry_unknown_eligibility_backend_raises(monkeypatch):
-    """Unknown ELIGIBILITY_BACKEND raises ValueError with supported list."""
+    """Unknown ELIGIBILITY_BACKEND raises ValidationError with supported list."""
+    from rcm_agent.exceptions import ValidationError
+
     reset_integration_backends()
     monkeypatch.setenv("ELIGIBILITY_BACKEND", "fhir")
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValidationError) as exc_info:
         get_eligibility_backend()
     assert "fhir" in str(exc_info.value)
     assert "mock" in str(exc_info.value).lower() or "Supported" in str(exc_info.value)
 
 
 def test_registry_unknown_prior_auth_backend_raises(monkeypatch):
-    """Unknown PRIOR_AUTH_BACKEND raises ValueError."""
+    """Unknown PRIOR_AUTH_BACKEND raises ValidationError."""
+    from rcm_agent.exceptions import ValidationError
+
     reset_integration_backends()
     monkeypatch.setenv("PRIOR_AUTH_BACKEND", "fhir")
-    with pytest.raises(ValueError) as exc_info:
+    with pytest.raises(ValidationError) as exc_info:
         get_prior_auth_backend()
     assert "fhir" in str(exc_info.value)

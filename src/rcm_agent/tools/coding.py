@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from rcm_agent.models import Encounter, EncounterType
+from rcm_agent.observability.logging import get_logger
 from rcm_agent.tools._types import (
     InvalidPair,
     MissingChargesResult,
@@ -14,6 +15,8 @@ from rcm_agent.tools._types import (
     SuggestedCode,
     ValidateCodesResult,
 )
+
+logger = get_logger(__name__)
 
 # Keyword -> (ICD-10, CPT) suggestions for heuristic code suggestion. Subset for synthetic encounters.
 _CLINICAL_TERM_TO_CODES: dict[str, list[tuple[str, str, str]]] = {
@@ -116,19 +119,27 @@ def suggest_codes(
     )
 
     if not suggested_icd and not suggested_cpt:
-        return SuggestCodesResult(
+        out = SuggestCodesResult(
             icd_codes=[],
             cpt_codes=[],
             confidence=0.5,
             message=f"No keyword match for encounter type {encounter_str}; manual review recommended.",
         )
-
-    return SuggestCodesResult(
-        icd_codes=suggested_icd,
-        cpt_codes=suggested_cpt,
-        confidence=0.85 if (suggested_icd or suggested_cpt) else 0.5,
-        message=f"Suggested {len(suggested_icd)} ICD code(s), {len(suggested_cpt)} CPT code(s) for encounter type {encounter_str}.",
+    else:
+        out = SuggestCodesResult(
+            icd_codes=suggested_icd,
+            cpt_codes=suggested_cpt,
+            confidence=0.85 if (suggested_icd or suggested_cpt) else 0.5,
+            message=f"Suggested {len(suggested_icd)} ICD code(s), {len(suggested_cpt)} CPT code(s) for encounter type {encounter_str}.",
+        )
+    logger.info(
+        "Tool call: suggest_codes",
+        action="tool_call",
+        tool="suggest_codes",
+        icd_count=len(out["icd_codes"]),
+        cpt_count=len(out["cpt_codes"]),
     )
+    return out
 
 
 def validate_code_combinations(
@@ -156,11 +167,19 @@ def validate_code_combinations(
                         ModifierSuggestion(cpt=key2, modifier=mod, reason="Same-day procedure with E&M.")
                     )
 
-    return ValidateCodesResult(
+    out = ValidateCodesResult(
         valid=len(invalid_pairs) == 0,
         invalid_pairs=invalid_pairs,
         modifier_suggestions=modifier_suggestions,
     )
+    logger.info(
+        "Tool call: validate_code_combinations",
+        action="tool_call",
+        tool="validate_code_combinations",
+        valid=out["valid"],
+        invalid_pair_count=len(out["invalid_pairs"]),
+    )
+    return out
 
 
 def _cpt_codes_to_set(cpt_codes: list[Any]) -> set[str]:

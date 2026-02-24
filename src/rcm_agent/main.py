@@ -8,7 +8,9 @@ import click
 from rcm_agent import __version__
 from rcm_agent.crews.main_crew import process_encounter
 from rcm_agent.db import EncounterRepository
+from rcm_agent.exceptions import DatabaseError, RcmAgentError, ValidationError
 from rcm_agent.models import Encounter, EncounterStatus, RcmStage
+from rcm_agent.observability import setup_logging
 
 
 @click.group()
@@ -20,9 +22,17 @@ from rcm_agent.models import Encounter, EncounterStatus, RcmStage
     type=click.Path(path_type=str),
     help="Path to SQLite database (default: data/rcm.db or RCM_DB_PATH).",
 )
+@click.option(
+    "--log-format",
+    envvar="RCM_AGENT_LOG_FORMAT",
+    default="human",
+    type=click.Choice(["human", "json"]),
+    help="Log format (default: human).",
+)
 @click.pass_context
-def main(ctx: click.Context, db_path: str) -> None:
+def main(ctx: click.Context, db_path: str, log_format: str) -> None:
     """Hospital RCM Agent - process encounters through eligibility, prior auth, and coding workflows."""
+    setup_logging(fmt=log_format)
     ctx.ensure_object(dict)
     ctx.obj["db_path"] = db_path
 
@@ -31,25 +41,32 @@ def _repo(ctx: click.Context) -> EncounterRepository:
     return EncounterRepository(ctx.obj["db_path"])
 
 
+def _load_encounter(encounter_file: str) -> Encounter:
+    """Load and validate an encounter from a JSON file."""
+    path = Path(encounter_file)
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        raise ValidationError(f"Invalid JSON in {encounter_file}: {e}") from e
+    try:
+        return Encounter.model_validate(data)
+    except Exception as e:
+        raise ValidationError(f"Invalid encounter data in {encounter_file}: {e}") from e
+
+
 @main.command()
 @click.argument("encounter_file", type=click.Path(exists=True, path_type=str))
 @click.pass_context
 def process(ctx: click.Context, encounter_file: str) -> None:
     """Process an encounter from a JSON file."""
-    path = Path(encounter_file)
     try:
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-        encounter = Encounter.model_validate(data)
-    except json.JSONDecodeError as e:
-        click.echo(f"Invalid JSON in {encounter_file}: {e}", err=True)
-        raise SystemExit(1) from None
-    except Exception as e:
-        click.echo(f"Invalid encounter data in {encounter_file}: {e}", err=True)
+        encounter = _load_encounter(encounter_file)
+    except ValidationError as e:
+        click.echo(str(e), err=True)
         raise SystemExit(1) from None
     repo = _repo(ctx)
 
-    # Save as PENDING (INTAKE = unrouted), then PROCESSING
     repo.save_encounter(encounter, RcmStage.INTAKE, EncounterStatus.PENDING)
     repo.update_status(
         encounter.encounter_id,
@@ -58,7 +75,12 @@ def process(ctx: click.Context, encounter_file: str) -> None:
         details="Router and pipeline started",
     )
 
-    output = process_encounter(encounter)
+    try:
+        output = process_encounter(encounter)
+    except RcmAgentError as e:
+        click.echo(f"Pipeline error for {encounter.encounter_id}: {e}", err=True)
+        raise SystemExit(1) from None
+
     repo.update_status(
         encounter.encounter_id,
         output.status,
@@ -137,8 +159,8 @@ def metrics(ctx: click.Context) -> None:
     click.echo(f"Clean rate:       {m['clean_rate_pct']:.1f}% ({m['clean_count']})")
     click.echo(f"Escalation %:     {m['escalation_pct']:.1f}% ({m['escalated_count']})")
     click.echo("By status:")
-    for status, count in sorted(m["by_status"].items()):
-        click.echo(f"  {status}: {count}")
+    for s, count in sorted(m["by_status"].items()):
+        click.echo(f"  {s}: {count}")
     click.echo("By stage:")
     for stage, count in sorted(m["by_stage"].items()):
         click.echo(f"  {stage}: {count}")
@@ -208,11 +230,8 @@ def denial_stats(ctx: click.Context) -> None:
 )
 def eval_router(examples_dir: str | None, output: str | None) -> None:
     """Evaluate router: compare heuristic vs LLM classifications across encounters."""
-    import logging
-
     from rcm_agent.crews.router_eval import run_evaluation
 
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     summary = run_evaluation(examples_dir=examples_dir, output_path=output)
     click.echo(f"Encounters evaluated: {summary.total}")
     click.echo(f"Primary stage agreements: {summary.agreements}")
@@ -235,25 +254,50 @@ def eval_router(examples_dir: str | None, output: str | None) -> None:
 @click.pass_context
 def process_multi(ctx: click.Context, encounter_file: str) -> None:
     """Process an encounter through multi-stage pipeline."""
-    path = Path(encounter_file)
     try:
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-        encounter = Encounter.model_validate(data)
-    except json.JSONDecodeError as e:
-        click.echo(f"Invalid JSON in {encounter_file}: {e}", err=True)
-        raise SystemExit(1) from None
-    except Exception as e:
-        click.echo(f"Invalid encounter data in {encounter_file}: {e}", err=True)
+        encounter = _load_encounter(encounter_file)
+    except ValidationError as e:
+        click.echo(str(e), err=True)
         raise SystemExit(1) from None
 
     from rcm_agent.crews.main_crew import process_encounter_multi_stage
 
-    outputs = process_encounter_multi_stage(encounter)
+    try:
+        outputs = process_encounter_multi_stage(encounter)
+    except RcmAgentError as e:
+        click.echo(f"Pipeline error for {encounter.encounter_id}: {e}", err=True)
+        raise SystemExit(1) from None
+
     click.echo(f"Encounter {encounter.encounter_id}: {len(outputs)} stage(s) executed")
     for i, output in enumerate(outputs, 1):
         click.echo(f"  Stage {i}: {output.stage.value} -> {output.status.value}")
         click.echo(f"    {output.message}")
+
+
+@main.command("db-migrate")
+@click.option(
+    "--db-path",
+    envvar="RCM_DB_PATH",
+    default="data/rcm.db",
+    type=click.Path(path_type=str),
+    help="Path to SQLite database.",
+)
+def db_migrate(db_path: str) -> None:
+    """Apply pending database migrations."""
+    from rcm_agent.db.migrations import current_version, migrate
+
+    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    try:
+        applied = migrate(db_path)
+    except DatabaseError as e:
+        click.echo(f"Migration failed: {e}", err=True)
+        raise SystemExit(1) from None
+
+    if applied:
+        click.echo(f"Applied migration(s): {applied}")
+    else:
+        click.echo("Database is up to date.")
+    click.echo(f"Current schema version: {current_version(db_path)}")
 
 
 if __name__ == "__main__":
