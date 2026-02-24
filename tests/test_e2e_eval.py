@@ -52,7 +52,7 @@ def test_extract_prior_auth_from_outputs_approved() -> None:
 
 
 def test_extract_prior_auth_from_outputs_denied() -> None:
-    """Prior auth stage with AUTH_DENIED and no auth number produces (False, False)."""
+    """Prior auth stage with AUTH_DENIED produces (True, False) (terminal decision)."""
     out = EncounterOutput(
         encounter_id="ENC-X",
         stage=RcmStage.PRIOR_AUTHORIZATION,
@@ -63,8 +63,24 @@ def test_extract_prior_auth_from_outputs_denied() -> None:
         raw_result={},
     )
     produced, approved = _extract_prior_auth_from_outputs([out])
-    assert produced is False
+    assert produced is True
     assert approved is False
+
+
+def test_extract_prior_auth_from_outputs_pending() -> None:
+    """Prior auth stage with non-terminal status (e.g. AUTH_REQUIRED) produces (False, None)."""
+    out = EncounterOutput(
+        encounter_id="ENC-X",
+        stage=RcmStage.PRIOR_AUTHORIZATION,
+        status=EncounterStatus.AUTH_REQUIRED,
+        actions_taken=[],
+        artifacts=[],
+        message="Pending",
+        raw_result={"authorization_number": "PENDING-1"},
+    )
+    produced, approved = _extract_prior_auth_from_outputs([out])
+    assert produced is False
+    assert approved is None
 
 
 def test_extract_prior_auth_from_outputs_no_prior_auth_stage() -> None:
@@ -185,9 +201,7 @@ def test_run_e2e_evaluation_mocked(
         ),
     ]
     golden_path = tmp_path / "golden.json"
-    golden_path.write_text(
-        '{"ENC-001": {"expected_stages": ["CODING_CHARGE_CAPTURE", "CLAIMS_SUBMISSION"]}}'
-    )
+    golden_path.write_text('{"ENC-001": {"expected_stages": ["CODING_CHARGE_CAPTURE", "CLAIMS_SUBMISSION"]}}')
     output_path = tmp_path / "e2e_report.json"
 
     summary = run_e2e_evaluation(

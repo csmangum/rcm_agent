@@ -315,7 +315,7 @@ def eval_e2e(
     "--output-dir",
     "-o",
     default="reports",
-    type=click.Path(path_type=str),
+    type=click.Path(file_okay=False, dir_okay=True, path_type=str),
     help="Directory to write evaluation reports (default: reports).",
 )
 def eval_all(examples_dir: str | None, output_dir: str | None) -> None:

@@ -65,9 +65,9 @@ See [docs/EVAL.md](docs/EVAL.md) for metrics, golden data, and how to run e2e te
 ## Tests
 
 ```bash
-pytest                              # default: excludes llm and e2e
-pytest -m "not llm and not e2e"      # CI mode
-pytest -m e2e                       # e2e tests (requires OPENAI_API_KEY)
+pytest                              # runs all tests (including llm and e2e; some may skip without API keys)
+pytest -m "not llm and not e2e"     # run fast tests only (excludes llm and e2e; mirrors CI markers)
+pytest -m e2e                       # only e2e tests (requires OPENAI_API_KEY)
 ```
 
 ## Project structure

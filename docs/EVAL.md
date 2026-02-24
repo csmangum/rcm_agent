@@ -94,7 +94,11 @@ Optional expected outcomes for regression testing. Edit `data/eval/golden.json`:
 }
 ```
 
-When golden data exists, e2e eval computes **router alignment rate** (fraction of encounters where pipeline stages include all expected stages).
+When golden data exists, e2e eval computes:
+
+- **Router alignment rate:** fraction of encounters where pipeline stages include all `expected_stages`
+- **Final status alignment rate:** when `expected_final_status` is set (non-null), fraction where actual final status matches
+- **Needs prior auth alignment rate:** when `needs_prior_auth` is set, fraction where encounter’s prior-auth need matches the golden value
 
 ## Interpreting Metrics
 
