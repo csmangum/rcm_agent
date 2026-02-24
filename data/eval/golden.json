@@ -1,0 +1,21 @@
+{
+  "ENC-001": {
+    "expected_stages": ["CODING_CHARGE_CAPTURE", "CLAIMS_SUBMISSION"],
+    "expected_final_status": "CLAIM_SUBMITTED",
+    "needs_prior_auth": false,
+    "description": "Routine office visit (Aetna, eligible)"
+  },
+  "ENC-002": {
+    "expected_stages": ["PRIOR_AUTHORIZATION", "CODING_CHARGE_CAPTURE", "CLAIMS_SUBMISSION"],
+    "expected_final_status": "CLAIM_SUBMITTED",
+    "needs_prior_auth": true,
+    "expected_auth_outcome": "approved",
+    "description": "MRI knee with prior auth (UnitedHealthcare)"
+  },
+  "ENC-004": {
+    "expected_stages": ["DENIAL_APPEAL"],
+    "expected_final_status": null,
+    "needs_prior_auth": false,
+    "description": "Denial scenario (Cigna) - appeal workflow"
+  }
+}
