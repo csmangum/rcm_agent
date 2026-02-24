@@ -25,12 +25,12 @@
       "Consider modifier 57 for same-day E&M with major procedure."
     ],
     "documented_procedures": [
-      "27130",
-      "99223"
+      "99223",
+      "27130"
     ],
     "suggested_cpts": [
-      "27130",
-      "99223"
+      "99223",
+      "27130"
     ]
   },
   "reimbursement": {

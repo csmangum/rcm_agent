@@ -86,8 +86,18 @@ def _get_cpt_charge_amounts() -> dict[str, float]:
 CPT_CHARGE_AMOUNTS: dict[str, float] = _get_cpt_charge_amounts()
 
 
+def get_cpt_charge_amounts() -> dict[str, float]:
+    """CPT charge amounts from YAML config (recomputed on each call, picks up reload)."""
+    return _get_cpt_charge_amounts()
+
+
 def _get_default_charge() -> float:
     return float(_rules().get("default_charge", 200.00))
+
+
+def get_default_charge() -> float:
+    """Default charge amount from YAML config (recomputed on each call, picks up reload)."""
+    return _get_default_charge()
 
 
 DEFAULT_CHARGE: float = _get_default_charge()

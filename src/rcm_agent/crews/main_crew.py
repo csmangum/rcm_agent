@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from rcm_agent.config import CPT_CHARGE_AMOUNTS, get_auth_required_procedures
+from rcm_agent.config import get_auth_required_procedures, get_cpt_charge_amounts
 from rcm_agent.crews.claims_submission_crew import run_claims_submission_crew
 from rcm_agent.crews.coding_crew import run_coding_crew
 from rcm_agent.crews.denial_appeal_crew import run_denial_appeal_crew
@@ -39,7 +39,7 @@ def estimate_charges(encounter: Encounter) -> float:
     """Simple charge estimate from procedure codes (for escalation threshold check)."""
     total = 0.0
     for p in encounter.procedures:
-        total += CPT_CHARGE_AMOUNTS.get(p.code, _DEFAULT_ESTIMATE)
+        total += get_cpt_charge_amounts().get(p.code, _DEFAULT_ESTIMATE)
     return total if total > 0 else _DEFAULT_ESTIMATE
 
 
@@ -75,7 +75,12 @@ def _build_pipeline_context_from_output(output: EncounterOutput) -> dict[str, An
     """Extract pipeline context from a crew output to pass to downstream stages."""
     ctx: dict[str, Any] = {}
     if output.stage == RcmStage.CODING_CHARGE_CAPTURE:
-        ctx["coding_result"] = output.raw_result.get("suggested_codes", {})
+        suggested = output.raw_result.get("suggested_codes", {})
+        validation = output.raw_result.get("validation")
+        coding_result: dict[str, Any] = dict(suggested)
+        if validation:
+            coding_result["validation"] = validation
+        ctx["coding_result"] = coding_result
     if output.stage == RcmStage.PRIOR_AUTHORIZATION:
         auth_num = output.raw_result.get("authorization_number") or output.raw_result.get("auth_id")
         if auth_num:
@@ -164,10 +169,10 @@ def process_encounter_multi_stage(
     outputs: list[EncounterOutput] = []
     accumulated_context: dict[str, Any] = dict(pipeline_context) if pipeline_context else {}
 
-    for i, stage in enumerate(multi_result.stages):
+    for i, (stage, stage_result) in enumerate(zip(multi_result.stages, multi_result.results), start=1):
         logger.info(
             "Multi-stage pipeline [%d/%d]: %s for %s",
-            i + 1,
+            i,
             len(multi_result.stages),
             stage.value,
             encounter.encounter_id,
@@ -180,9 +185,9 @@ def process_encounter_multi_stage(
 
         output = dispatch_to_crew(encounter, stage, pc or None)
         output.raw_result["router_stage"] = stage.value
-        output.raw_result["router_confidence"] = multi_result.results[i].confidence
-        output.raw_result["router_reasoning"] = multi_result.results[i].reasoning
-        output.raw_result["pipeline_position"] = i + 1
+        output.raw_result["router_confidence"] = stage_result.confidence
+        output.raw_result["router_reasoning"] = stage_result.reasoning
+        output.raw_result["pipeline_position"] = i
         output.raw_result["pipeline_total_stages"] = len(multi_result.stages)
         outputs.append(output)
 

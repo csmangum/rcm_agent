@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -94,15 +95,21 @@ class EvalSummary:
 
 
 def evaluate_encounter(encounter: Encounter) -> EvalRecord:
-    """Run both heuristic and LLM classification on a single encounter."""
+    """Run both heuristic and LLM classification on a single encounter.
+
+    LLM classification is only performed when RCM_ROUTER_LLM_ENABLED is set to a
+    truthy value, keeping evaluation deterministic by default.
+    """
     heuristic = classify_encounter(encounter)
     heuristic_multi = classify_encounter_multi_stage(encounter)
     llm_result: MultiStageRouterResult | None = None
 
-    try:
-        llm_result = llm_classify_encounter(encounter)
-    except Exception:
-        logger.exception("LLM classification failed for %s", encounter.encounter_id)
+    llm_enabled = os.environ.get("RCM_ROUTER_LLM_ENABLED", "false").strip().lower() in ("true", "1", "yes", "on")
+    if llm_enabled:
+        try:
+            llm_result = llm_classify_encounter(encounter)
+        except Exception:
+            logger.exception("LLM classification failed for %s", encounter.encounter_id)
 
     if llm_result is None:
         return EvalRecord(

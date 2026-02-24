@@ -404,13 +404,11 @@ class TestRouterEvaluation:
         assert not record.agrees
         assert "unavailable" in record.notes.lower() or "failed" in record.notes.lower()
 
-    def test_evaluate_encounter_with_llm_agreement(self, encounter_001: Encounter) -> None:
+    def test_evaluate_encounter_with_llm_agreement(
+        self, encounter_001: Encounter, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """When LLM agrees with heuristic, agrees=True."""
-        mock_resp = MagicMock()
-        mock_resp.choices = [MagicMock()]
-        mock_resp.choices[0].message.content = json.dumps(
-            {"stages": [{"stage": "CODING_CHARGE_CAPTURE", "confidence": 0.95, "reasoning": "coding"}]}
-        )
+        monkeypatch.setenv("RCM_ROUTER_LLM_ENABLED", "true")
         with patch("rcm_agent.crews.router_eval.llm_classify_encounter") as mock_llm:
             mock_llm.return_value = MultiStageRouterResult(
                 stages=[RcmStage.CODING_CHARGE_CAPTURE],
@@ -421,8 +419,11 @@ class TestRouterEvaluation:
         assert record.agrees
         assert record.llm_stage == "CODING_CHARGE_CAPTURE"
 
-    def test_evaluate_encounter_with_llm_disagreement(self, encounter_001: Encounter) -> None:
+    def test_evaluate_encounter_with_llm_disagreement(
+        self, encounter_001: Encounter, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """When LLM disagrees with heuristic, notes contain DISAGREEMENT."""
+        monkeypatch.setenv("RCM_ROUTER_LLM_ENABLED", "true")
         with patch("rcm_agent.crews.router_eval.llm_classify_encounter") as mock_llm:
             mock_llm.return_value = MultiStageRouterResult(
                 stages=[RcmStage.ELIGIBILITY_VERIFICATION],

@@ -11,8 +11,7 @@
   "date_of_service": "2026-02-10",
   "place_of_service": "11",
   "icd_codes": [
-    "J06.9",
-    "J02.9"
+    "J06.9"
   ],
   "cpt_codes": [
     "99213"
@@ -24,8 +23,7 @@
       "cpt_code": "99213",
       "description": "Office visit, established patient, low complexity",
       "icd_pointers": [
-        "J06.9",
-        "J02.9"
+        "J06.9"
       ],
       "modifiers": [],
       "units": 1,
