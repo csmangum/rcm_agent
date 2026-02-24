@@ -9,8 +9,8 @@ from dotenv import load_dotenv
 # Load .env so OPENAI_API_KEY and other vars are available for LLM/e2e tests
 load_dotenv()
 
-from rcm_agent.integrations.registry import get_claims_backend, get_prior_auth_backend
-from rcm_agent.models import Encounter
+from rcm_agent.integrations.registry import get_claims_backend, get_prior_auth_backend  # noqa: E402
+from rcm_agent.models import Encounter  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

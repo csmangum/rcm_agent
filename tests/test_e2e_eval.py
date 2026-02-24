@@ -4,8 +4,6 @@ import json
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 from rcm_agent.crews.e2e_eval import (
     E2ERecord,
     E2ESummary,
