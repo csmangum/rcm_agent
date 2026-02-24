@@ -29,8 +29,8 @@ from rcm_agent.tools.appeal import (
 from rcm_agent.tools.coding import (
     calculate_expected_reimbursement,
     identify_missing_charges,
-    search_coding_guidelines,
     search_cms_requirements,
+    search_coding_guidelines,
     search_ncci_edits,
     suggest_codes,
     validate_code_combinations,
@@ -58,7 +58,7 @@ from rcm_agent.tools.prior_auth import (
 )
 
 __all__ = [
-    # TypedDict types
+    "DENIAL_REASON_CODE_CATALOG",
     "AppealPacket",
     "AuthPacket",
     "AuthStatusResult",
@@ -68,6 +68,7 @@ __all__ = [
     "CoordinationOfBenefitsResult",
     "DenialAnalysis",
     "DenialSummary",
+    "DenialType",
     "EligibilityResult",
     "InvalidPair",
     "MissingChargesResult",
@@ -78,16 +79,14 @@ __all__ = [
     "SuggestCodesResult",
     "SuggestedCode",
     "ValidateCodesResult",
-    # Functions
     "assemble_appeal_packet",
+    "assemble_auth_packet",
     "assess_appeal_viability",
     "calculate_expected_reimbursement",
     "check_coordination_of_benefits",
     "check_escalation",
     "check_member_eligibility",
     "classify_denial_type",
-    "DENIAL_REASON_CODE_CATALOG",
-    "DenialType",
     "extract_clinical_indicators",
     "flag_coverage_gaps",
     "generate_appeal_letter",
@@ -97,8 +96,8 @@ __all__ = [
     "search_cms_requirements",
     "search_coding_guidelines",
     "search_ncci_edits",
-    "search_payer_policies_for_appeal",
     "search_payer_policies",
+    "search_payer_policies_for_appeal",
     "submit_auth_request",
     "suggest_codes",
     "validate_code_combinations",

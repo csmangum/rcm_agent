@@ -17,9 +17,7 @@ def check_member_eligibility(
     date_of_service: str,
 ) -> EligibilityResult:
     """Return eligibility status, plan details, effective/term dates from backend."""
-    result: dict[str, Any] = get_eligibility_backend().check_member_eligibility(
-        payer, member_id, date_of_service
-    )
+    result: dict[str, Any] = get_eligibility_backend().check_member_eligibility(payer, member_id, date_of_service)
     return EligibilityResult(
         eligible=result["eligible"],
         plan_name=result["plan_name"],
@@ -37,9 +35,7 @@ def verify_benefits(
     procedure_codes: list[str],
 ) -> BenefitsResult:
     """Return covered/not covered, copay, coinsurance, deductible per procedure from backend."""
-    result: dict[str, Any] = get_eligibility_backend().verify_benefits(
-        payer, member_id, procedure_codes
-    )
+    result: dict[str, Any] = get_eligibility_backend().verify_benefits(payer, member_id, procedure_codes)
     return BenefitsResult(
         payer=result["payer"],
         member_id=result["member_id"],
@@ -58,7 +54,7 @@ def check_coordination_of_benefits(patient: Patient, insurance: Insurance) -> Co
     )
 
 
-def flag_coverage_gaps(eligibility_result: dict[str, Any]) -> list[str]:
+def flag_coverage_gaps(eligibility_result: EligibilityResult | dict[str, Any]) -> list[str]:
     """
     Identify inactive policies, terminated coverage, out-of-network from eligibility result.
     Returns one consolidated message per root cause (no duplicate termination/eligible messages).

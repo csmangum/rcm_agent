@@ -1,13 +1,11 @@
 """Unit tests for coding and charge capture tools."""
 
-import pytest
-
-from rcm_agent.models import Encounter, EncounterType, Patient, Insurance, ProcedureCode, DiagnosisCode
+from rcm_agent.models import DiagnosisCode, Encounter, EncounterType, Insurance, Patient, ProcedureCode
 from rcm_agent.tools.coding import (
     calculate_expected_reimbursement,
     identify_missing_charges,
-    search_coding_guidelines,
     search_cms_requirements,
+    search_coding_guidelines,
     search_ncci_edits,
     suggest_codes,
     validate_code_combinations,
@@ -15,7 +13,9 @@ from rcm_agent.tools.coding import (
 
 
 def test_suggest_codes_upper_respiratory():
-    notes = "Established patient presents with 3 days of rhinorrhea, mild sore throat. Acute upper respiratory infection."
+    notes = (
+        "Established patient presents with 3 days of rhinorrhea, mild sore throat. Acute upper respiratory infection."
+    )
     r = suggest_codes(notes, EncounterType.office_visit, None)
     assert r["confidence"] >= 0.5
     assert "icd_codes" in r and "cpt_codes" in r
@@ -29,10 +29,14 @@ def test_suggest_codes_upper_respiratory():
 def test_suggest_codes_knee_pain():
     notes = "Chronic right knee pain, MRI ordered for meniscal tear."
     r = suggest_codes(notes, "outpatient_procedure", None)
-    cpt_codes = [c["code"] for c in r["cpt_codes"]] if r["cpt_codes"] and isinstance(r["cpt_codes"][0], dict) else (r["cpt_codes"] or [])
-    assert ("M25.561" in [c["code"] for c in r["icd_codes"]] or
-            "73721" in cpt_codes or
-            "29881" in cpt_codes) or (r["icd_codes"] or r["cpt_codes"])
+    cpt_codes = (
+        [c["code"] for c in r["cpt_codes"]]
+        if r["cpt_codes"] and isinstance(r["cpt_codes"][0], dict)
+        else (r["cpt_codes"] or [])
+    )
+    assert ("M25.561" in [c["code"] for c in r["icd_codes"]] or "73721" in cpt_codes or "29881" in cpt_codes) or (
+        r["icd_codes"] or r["cpt_codes"]
+    )
 
 
 def test_suggest_codes_no_match():

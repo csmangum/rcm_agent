@@ -37,9 +37,7 @@ def run_coding_crew(encounter: Encounter) -> EncounterOutput:
     guidelines_backend = get_coding_guidelines_backend()
     actions.append("search_coding_guidelines")
     coding_guidelines_query = f"CPT ICD-10 coding guidelines {encounter.type.value}"
-    coding_guidelines_snippets = search_coding_guidelines(
-        coding_guidelines_query, backend=guidelines_backend or "mock"
-    )
+    coding_guidelines_snippets = search_coding_guidelines(coding_guidelines_query, backend=guidelines_backend or "mock")
 
     actions.append("validate_code_combinations")
     validation = validate_code_combinations(icd_codes, cpt_codes)
@@ -54,9 +52,7 @@ def run_coding_crew(encounter: Encounter) -> EncounterOutput:
     has_validation_issues = not validation.get("valid", True)
     has_missing_charge_flags = bool(missing.get("missing_charge_flags"))
     status = (
-        EncounterStatus.NEEDS_REVIEW
-        if has_validation_issues or has_missing_charge_flags
-        else EncounterStatus.CODED
+        EncounterStatus.NEEDS_REVIEW if has_validation_issues or has_missing_charge_flags else EncounterStatus.CODED
     )
     raw_result = {
         "suggested_codes": suggestion,

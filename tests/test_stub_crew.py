@@ -1,7 +1,5 @@
 """Tests for stub crew (CLAIMS_SUBMISSION, DENIAL_APPEAL fallback)."""
 
-import pytest
-
 from rcm_agent.crews.stub import run_stub_crew
 from rcm_agent.models import EncounterStatus, RcmStage
 

@@ -1,12 +1,17 @@
 """Coding and charge capture tools: code suggestion, NCCI validation, missing charges, guidelines stub, fee schedule."""
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from rcm_agent.models import Encounter, EncounterType
 from rcm_agent.tools._types import (
+    InvalidPair,
     MissingChargesResult,
+    ModifierSuggestion,
+    PerCodeReimbursement,
     ReimbursementResult,
     SuggestCodesResult,
+    SuggestedCode,
     ValidateCodesResult,
 )
 
@@ -27,9 +32,9 @@ _CLINICAL_TERM_TO_CODES: dict[str, list[tuple[str, str, str]]] = {
 # Subset of common bundling conflicts.
 _NCCI_EDITS: dict[tuple[str, str], tuple[bool, str | None]] = {
     ("99213", "99214"): (False, None),  # Cannot bill two E&M same encounter without modifier
-    ("73721", "73720"): (False, None),   # MRI with vs without contrast
+    ("73721", "73720"): (False, None),  # MRI with vs without contrast
     ("29881", "29880"): (False, None),  # Meniscectomy vs debridement
-    ("27130", "99223"): (True, "57"),   # Procedure with E&M same day: modifier 57
+    ("27130", "99223"): (True, "57"),  # Procedure with E&M same day: modifier 57
 }
 
 # Fee schedule: (cpt_code, payer) -> amount. Fallback by cpt_code only.
@@ -55,10 +60,18 @@ _MOCK_GUIDELINES: dict[str, list[str]] = {
 
 # NCCI edit lookup: (cpt1, cpt2) -> snippet list for search_ncci_edits mock.
 _MOCK_NCCI_SNIPPETS: dict[tuple[str, str], list[str]] = {
-    ("99213", "99214"): ["NCCI: Cannot bill two E&M levels for same encounter without modifier; choose one or append modifier."],
-    ("73721", "73720"): ["NCCI: MRI with (73720) vs without (73721) contrast are mutually exclusive; do not bill both for same anatomic area."],
-    ("29881", "29880"): ["NCCI: Meniscectomy (29881) and debridement (29880) bundle; separate encounters or modifier if distinct."],
-    ("27130", "99223"): ["Modifier 57 may be required for same-day E&M (99223) with decision for major procedure (27130)."],
+    ("99213", "99214"): [
+        "NCCI: Cannot bill two E&M levels for same encounter without modifier; choose one or append modifier."
+    ],
+    ("73721", "73720"): [
+        "NCCI: MRI with (73720) vs without (73721) contrast are mutually exclusive; do not bill both for same anatomic area."
+    ],
+    ("29881", "29880"): [
+        "NCCI: Meniscectomy (29881) and debridement (29880) bundle; separate encounters or modifier if distinct."
+    ],
+    ("27130", "99223"): [
+        "Modifier 57 may be required for same-day E&M (99223) with decision for major procedure (27130)."
+    ],
 }
 
 # CMS requirements by topic for search_cms_requirements mock.
@@ -80,8 +93,8 @@ def suggest_codes(
     """
     existing_codes = existing_codes or {}
     notes_lower = (clinical_notes or "").lower()
-    suggested_icd: list[dict[str, Any]] = []
-    suggested_cpt: list[dict[str, Any]] = []
+    suggested_icd: list[SuggestedCode] = []
+    suggested_cpt: list[SuggestedCode] = []
     seen_icd: set[str] = set(existing_codes.get("icd", []))
     seen_cpt: set[str] = set(existing_codes.get("cpt", []))
 
@@ -90,13 +103,15 @@ def suggest_codes(
             continue
         for icd, desc, cpt in code_tuples:
             if icd not in seen_icd:
-                suggested_icd.append({"code": icd, "description": desc, "confidence": 0.85})
+                suggested_icd.append(SuggestedCode(code=icd, description=desc, confidence=0.85))
                 seen_icd.add(icd)
             if cpt not in seen_cpt:
-                suggested_cpt.append({"code": cpt, "description": desc, "confidence": 0.85})
+                suggested_cpt.append(SuggestedCode(code=cpt, description=desc, confidence=0.85))
                 seen_cpt.add(cpt)
 
-    encounter_str = encounter_type if isinstance(encounter_type, str) else getattr(encounter_type, "value", str(encounter_type))
+    encounter_str = (
+        encounter_type if isinstance(encounter_type, str) else getattr(encounter_type, "value", str(encounter_type))
+    )
 
     if not suggested_icd and not suggested_cpt:
         return SuggestCodesResult(
@@ -121,8 +136,8 @@ def validate_code_combinations(
     """
     Check against hardcoded NCCI edit subset. Return valid/invalid pairs and modifier suggestions.
     """
-    invalid_pairs: list[dict[str, Any]] = []
-    modifier_suggestions: list[dict[str, str]] = []
+    invalid_pairs: list[InvalidPair] = []
+    modifier_suggestions: list[ModifierSuggestion] = []
 
     for i, cpt1 in enumerate(cpt_codes):
         for cpt2 in cpt_codes[i + 1 :]:
@@ -131,9 +146,13 @@ def validate_code_combinations(
             if edit:
                 allowed_with_mod, mod = edit
                 if not allowed_with_mod:
-                    invalid_pairs.append({"cpt_1": key1, "cpt_2": key2, "reason": "NCCI bundle; separate or modifier."})
+                    invalid_pairs.append(
+                        InvalidPair(cpt_1=key1, cpt_2=key2, reason="NCCI bundle; separate or modifier.")
+                    )
                 elif mod:
-                    modifier_suggestions.append({"cpt": key2, "modifier": mod, "reason": "Same-day procedure with E&M."})
+                    modifier_suggestions.append(
+                        ModifierSuggestion(cpt=key2, modifier=mod, reason="Same-day procedure with E&M.")
+                    )
 
     return ValidateCodesResult(
         valid=len(invalid_pairs) == 0,
@@ -252,7 +271,7 @@ def calculate_expected_reimbursement(cpt_codes: list[str], payer: str) -> Reimbu
     """
     Lookup hardcoded fee schedule. Return per-code and total expected reimbursement.
     """
-    per_code: list[dict[str, Any]] = []
+    per_code: list[PerCodeReimbursement] = []
     total = 0.0
     for code in cpt_codes:
         amount = _FEE_SCHEDULE.get((code, payer))
@@ -260,7 +279,7 @@ def calculate_expected_reimbursement(cpt_codes: list[str], payer: str) -> Reimbu
             amount = _FEE_SCHEDULE.get((code, ""))
         if amount is None:
             amount = _DEFAULT_FEE
-        per_code.append({"cpt_code": code, "expected_amount": amount})
+        per_code.append(PerCodeReimbursement(cpt_code=code, expected_amount=amount))
         total += amount
     return ReimbursementResult(
         payer=payer,

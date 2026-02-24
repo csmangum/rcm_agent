@@ -1,8 +1,6 @@
 """Unit tests for prior authorization tools."""
 
-import pytest
-
-from rcm_agent.models import Encounter, ProcedureCode, DiagnosisCode, Patient, Insurance
+from rcm_agent.models import DiagnosisCode, Encounter, Insurance, Patient, ProcedureCode
 from rcm_agent.tools.prior_auth import (
     assemble_auth_packet,
     extract_clinical_indicators,

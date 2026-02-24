@@ -31,7 +31,7 @@ def run_eligibility_crew(encounter: Encounter) -> EncounterOutput:
             encounter_id=encounter.encounter_id,
             stage=RcmStage.ELIGIBILITY_VERIFICATION,
             status=EncounterStatus.NOT_ELIGIBLE,
-            actions_taken=actions + ["flag_coverage_gaps", "check_coordination_of_benefits"],
+            actions_taken=[*actions, "flag_coverage_gaps", "check_coordination_of_benefits"],
             artifacts=[f"eligibility_gaps: {', '.join(gaps)}"] if gaps else [],
             message="Eligibility check: coverage lapsed or terminated.",
             raw_result=raw_result,
@@ -49,7 +49,6 @@ def run_eligibility_crew(encounter: Encounter) -> EncounterOutput:
     gaps = flag_coverage_gaps(eligibility_result)
     raw_result["coverage_gaps"] = gaps
 
-    recommendation = "proceed" if not gaps else "hold"
     status = EncounterStatus.ELIGIBLE if not gaps else EncounterStatus.NEEDS_REVIEW
     artifacts: list[str] = []
     if gaps:
@@ -60,7 +59,7 @@ def run_eligibility_crew(encounter: Encounter) -> EncounterOutput:
     message = (
         "Eligibility verified; recommendation: proceed."
         if not gaps
-        else f"Eligibility verified with coverage gaps; recommendation: hold. Human review recommended."
+        else "Eligibility verified with coverage gaps; recommendation: hold. Human review recommended."
     )
     return EncounterOutput(
         encounter_id=encounter.encounter_id,

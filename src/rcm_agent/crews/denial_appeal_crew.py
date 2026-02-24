@@ -30,9 +30,7 @@ def run_denial_appeal_crew(encounter: Encounter) -> EncounterOutput:
     denial_type = classify_denial_type(reason_codes)
 
     actions.append("assess_appeal_viability")
-    appeal_viable, viability_summary = assess_appeal_viability(
-        reason_codes, encounter
-    )
+    appeal_viable, viability_summary = assess_appeal_viability(reason_codes, encounter)
 
     denial_analysis = DenialAnalysis(
         reason_codes=reason_codes,
@@ -58,19 +56,13 @@ def run_denial_appeal_crew(encounter: Encounter) -> EncounterOutput:
         actions.append("search_payer_policies_for_appeal")
         policy_snippets: list[str] = []
         for p in encounter.procedures:
-            policy_snippets.extend(
-                search_payer_policies_for_appeal(
-                    encounter.insurance.payer, p.code
-                )
-            )
+            policy_snippets.extend(search_payer_policies_for_appeal(encounter.insurance.payer, p.code))
 
         actions.append("generate_appeal_letter")
         letter_text = generate_appeal_letter(encounter, denial_analysis, policy_snippets)
 
         actions.append("assemble_appeal_packet")
-        appeal_packet = assemble_appeal_packet(
-            encounter, denial_analysis, letter_text
-        )
+        appeal_packet = assemble_appeal_packet(encounter, denial_analysis, letter_text)
 
         raw_result["appeal_packet"] = appeal_packet
         raw_result["letter_text"] = letter_text

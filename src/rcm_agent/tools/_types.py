@@ -8,10 +8,10 @@ from __future__ import annotations
 
 from typing import TypedDict
 
-
 # ---------------------------------------------------------------------------
 # Eligibility tools
 # ---------------------------------------------------------------------------
+
 
 class EligibilityResult(TypedDict):
     eligible: bool
@@ -47,6 +47,7 @@ class CoordinationOfBenefitsResult(TypedDict):
 # ---------------------------------------------------------------------------
 # Prior-auth tools
 # ---------------------------------------------------------------------------
+
 
 class ClinicalIndicatorsResult(TypedDict):
     diagnoses: list[str]
@@ -88,6 +89,7 @@ class AuthStatusResult(TypedDict):
 # ---------------------------------------------------------------------------
 # Coding tools
 # ---------------------------------------------------------------------------
+
 
 class SuggestedCode(TypedDict):
     code: str
@@ -143,6 +145,7 @@ class ReimbursementResult(TypedDict):
 # the denial_analysis dict used by appeal tools)
 # ---------------------------------------------------------------------------
 
+
 class DenialAnalysis(TypedDict):
     reason_codes: list[str]
     denial_type: str
@@ -153,6 +156,7 @@ class DenialAnalysis(TypedDict):
 # ---------------------------------------------------------------------------
 # Appeal tools
 # ---------------------------------------------------------------------------
+
 
 class DenialSummary(TypedDict):
     reason_codes: list[str]

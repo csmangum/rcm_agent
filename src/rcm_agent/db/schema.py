@@ -115,9 +115,7 @@ INDEX_DENIAL_EVENTS_ENCOUNTER_ID = (
 INDEX_DENIAL_EVENTS_DENIAL_TYPE = (
     "CREATE INDEX IF NOT EXISTS idx_denial_events_denial_type ON denial_events(denial_type);"
 )
-INDEX_DENIAL_EVENTS_PAYER = (
-    "CREATE INDEX IF NOT EXISTS idx_denial_events_payer ON denial_events(payer);"
-)
+INDEX_DENIAL_EVENTS_PAYER = "CREATE INDEX IF NOT EXISTS idx_denial_events_payer ON denial_events(payer);"
 
 ALL_TABLES = [
     ENCOUNTERS_TABLE,

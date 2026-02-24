@@ -109,11 +109,14 @@ class EligibilityMock:
         per_code = _MOCK_BENEFITS.get(key, {})
         procedures: list[dict[str, Any]] = []
         for code in procedure_codes:
-            info = per_code.get(code, {
-                "covered": True,
-                "copay": 0,
-                "coinsurance_pct": 20,
-                "deductible_remaining": 500,
-            })
+            info = per_code.get(
+                code,
+                {
+                    "covered": True,
+                    "copay": 0,
+                    "coinsurance_pct": 20,
+                    "deductible_remaining": 500,
+                },
+            )
             procedures.append({"procedure_code": code, **info})
         return {"payer": payer, "member_id": member_id, "procedures": procedures}

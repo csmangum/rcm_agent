@@ -1,6 +1,6 @@
 """Appeal tools: RAG search for appeal, appeal letter draft, appeal packet assembly."""
 
-from typing import Any, Callable
+from collections.abc import Callable
 
 from rcm_agent.models import Encounter
 from rcm_agent.rag import get_payer_policy_backend
@@ -45,18 +45,21 @@ def generate_appeal_letter(
     payer = encounter.insurance.payer
     member_id = encounter.insurance.member_id
 
-    policy_ref = "\n".join(f"  - {s[:200]}..." if len(s) > 200 else f"  - {s}" for s in policy_snippets[:5]) if policy_snippets else "  (No policy snippets retrieved.)"
+    policy_ref = (
+        "\n".join(f"  - {s[:200]}..." if len(s) > 200 else f"  - {s}" for s in policy_snippets[:5])
+        if policy_snippets
+        else "  (No policy snippets retrieved.)"
+    )
 
     reason_codes_display = (
         ", ".join(
-            f"{c} ({DENIAL_REASON_CODE_CATALOG[c]})" if c in DENIAL_REASON_CODE_CATALOG else c
-            for c in reason_codes
+            f"{c} ({DENIAL_REASON_CODE_CATALOG[c]})" if c in DENIAL_REASON_CODE_CATALOG else c for c in reason_codes
         )
         or "Not specified"
     )
 
     letter = f"""
-APPEAL LETTER – Claim Denial
+APPEAL LETTER - Claim Denial
 
 Payer: {payer}
 Member ID: {member_id}

@@ -1,9 +1,7 @@
 """Integration tests for coding and charge capture crew."""
 
-import pytest
-
-from rcm_agent.models import EncounterStatus, RcmStage
 from rcm_agent.crews.coding_crew import run_coding_crew
+from rcm_agent.models import EncounterStatus, RcmStage
 
 
 def test_coding_crew_enc_001_coded(encounter_001):
@@ -21,7 +19,8 @@ def test_coding_crew_enc_001_coded(encounter_001):
 
 def test_coding_crew_empty_notes_completes_with_fallback():
     """Coding crew with empty clinical notes completes (uses existing codes, low confidence)."""
-    from rcm_agent.models import Encounter, Patient, Insurance, ProcedureCode, DiagnosisCode, EncounterType
+    from rcm_agent.models import DiagnosisCode, Encounter, EncounterType, Insurance, Patient, ProcedureCode
+
     encounter = Encounter(
         encounter_id="ENC-EMPTY",
         patient=Patient(age=40, gender="M", zip="10001"),
@@ -42,8 +41,14 @@ def test_coding_crew_empty_notes_completes_with_fallback():
 
 def test_coding_crew_validation_failure_returns_needs_review(encounter_001, monkeypatch):
     """When validate_code_combinations returns invalid pairs, status is NEEDS_REVIEW."""
+
     def mock_validate(_icd, _cpt):
-        return {"valid": False, "invalid_pairs": [{"cpt_1": "99213", "cpt_2": "99214", "reason": "NCCI bundle"}], "modifier_suggestions": []}
+        return {
+            "valid": False,
+            "invalid_pairs": [{"cpt_1": "99213", "cpt_2": "99214", "reason": "NCCI bundle"}],
+            "modifier_suggestions": [],
+        }
+
     monkeypatch.setattr(
         "rcm_agent.crews.coding_crew.validate_code_combinations",
         mock_validate,

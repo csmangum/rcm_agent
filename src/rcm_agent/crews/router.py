@@ -46,10 +46,7 @@ def classify_encounter(encounter: Encounter) -> RouterResult:
         )
 
     # ELIGIBILITY_VERIFICATION: lapsed, termination, or eligibility issues
-    if any(
-        kw in notes_lower
-        for kw in ("lapsed", "termination", "terminated", "eligibility")
-    ):
+    if any(kw in notes_lower for kw in ("lapsed", "termination", "terminated", "eligibility")):
         return RouterResult(
             stage=RcmStage.ELIGIBILITY_VERIFICATION,
             confidence=1.0,

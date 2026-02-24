@@ -1,9 +1,7 @@
 """Integration tests for eligibility verification crew."""
 
-import pytest
-
-from rcm_agent.models import EncounterStatus, RcmStage
 from rcm_agent.crews.eligibility_crew import run_eligibility_crew
+from rcm_agent.models import EncounterStatus, RcmStage
 
 
 def test_eligibility_crew_enc_001_eligible(encounter_001):
@@ -27,8 +25,10 @@ def test_eligibility_crew_enc_005_not_eligible(encounter_005):
 
 def test_eligibility_crew_eligible_with_gaps_returns_needs_review(encounter_001, monkeypatch):
     """When member is eligible but flag_coverage_gaps returns gaps, status is NEEDS_REVIEW."""
+
     def mock_flag_gaps(_eligibility_result):
         return ["Provider or facility may be out-of-network."]
+
     monkeypatch.setattr(
         "rcm_agent.crews.eligibility_crew.flag_coverage_gaps",
         mock_flag_gaps,
@@ -43,7 +43,8 @@ def test_eligibility_crew_eligible_with_gaps_returns_needs_review(encounter_001,
 
 def test_eligibility_crew_unknown_payer_returns_sensible_output():
     """Eligibility crew with unknown payer/member_id completes (mock returns default eligible)."""
-    from rcm_agent.models import Encounter, Patient, Insurance, ProcedureCode, DiagnosisCode, EncounterType
+    from rcm_agent.models import DiagnosisCode, Encounter, EncounterType, Insurance, Patient, ProcedureCode
+
     encounter = Encounter(
         encounter_id="ENC-UNK",
         patient=Patient(age=30, gender="F", zip="10001"),
@@ -59,4 +60,3 @@ def test_eligibility_crew_unknown_payer_returns_sensible_output():
     assert output.encounter_id == "ENC-UNK"
     assert output.stage == RcmStage.ELIGIBILITY_VERIFICATION
     assert "eligibility" in output.raw_result
-

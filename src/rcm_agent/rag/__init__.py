@@ -6,8 +6,8 @@ DATA_DIR is set for medicare_rag at each RAG call; once set it persists for the 
 
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from rcm_agent.config import get_rag_config
 

@@ -1,7 +1,5 @@
 """Unit tests for eligibility verification tools."""
 
-import pytest
-
 from rcm_agent.models import Insurance, Patient
 from rcm_agent.tools.eligibility import (
     check_coordination_of_benefits,

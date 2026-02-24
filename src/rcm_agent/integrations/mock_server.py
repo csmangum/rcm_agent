@@ -46,17 +46,13 @@ class EligibilityVerifyBody(BaseModel):
 @app.post("/eligibility/check")
 def eligibility_check(body: EligibilityCheckBody) -> dict[str, Any]:
     """Check member eligibility. POST JSON: { payer, member_id, date_of_service }."""
-    return _eligibility.check_member_eligibility(
-        body.payer, body.member_id, body.date_of_service
-    )
+    return _eligibility.check_member_eligibility(body.payer, body.member_id, body.date_of_service)
 
 
 @app.post("/eligibility/verify")
 def eligibility_verify(body: EligibilityVerifyBody) -> dict[str, Any]:
     """Verify benefits for procedure codes. POST JSON: { payer, member_id, procedure_codes }."""
-    return _eligibility.verify_benefits(
-        body.payer, body.member_id, body.procedure_codes
-    )
+    return _eligibility.verify_benefits(body.payer, body.member_id, body.procedure_codes)
 
 
 # --- Prior auth ---
