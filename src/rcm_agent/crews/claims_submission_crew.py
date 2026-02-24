@@ -87,7 +87,7 @@ def run_claims_submission_crew(
     remit_status = remit_result.get("status", "pending")
     if remit_status == "paid":
         encounter_status = EncounterStatus.CLAIM_ACCEPTED
-        paid = remit_result.get("paid_amount", 0.0)
+        paid = remit_result.get("paid_amount") or 0.0
         message = f"Claim {claim_id} accepted and paid ${paid:,.2f}; tracking={submit_result.get('tracking_number')}."
     elif remit_status == "denied":
         encounter_status = EncounterStatus.CLAIM_DENIED

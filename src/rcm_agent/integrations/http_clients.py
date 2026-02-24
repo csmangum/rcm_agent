@@ -9,12 +9,23 @@ from typing import Any
 import httpx
 
 
-class EligibilityHttpClient:
-    """EligibilityBackend that calls /eligibility/check and /eligibility/verify over HTTP."""
+class _BaseHttpClient:
+    """Base class for HTTP clients with shared GET and POST helpers."""
 
     def __init__(self, base_url: str, client: httpx.Client | None = None) -> None:
         self._base = base_url.rstrip("/")
         self._client = client
+
+    def _get(self, path: str) -> dict[str, Any]:
+        url = f"{self._base}{path}"
+        if self._client is not None:
+            resp = self._client.get(url)
+        else:
+            with httpx.Client(timeout=30.0) as c:
+                resp = c.get(url)
+        resp.raise_for_status()
+        result: dict[str, Any] = resp.json()
+        return result
 
     def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
         url = f"{self._base}{path}"
@@ -26,6 +37,10 @@ class EligibilityHttpClient:
         resp.raise_for_status()
         result: dict[str, Any] = resp.json()
         return result
+
+
+class EligibilityHttpClient(_BaseHttpClient):
+    """EligibilityBackend that calls /eligibility/check and /eligibility/verify over HTTP."""
 
     def check_member_eligibility(
         self,
@@ -50,34 +65,8 @@ class EligibilityHttpClient:
         )
 
 
-class PriorAuthHttpClient:
+class PriorAuthHttpClient(_BaseHttpClient):
     """PriorAuthBackend that calls /prior-auth/submit and /prior-auth/status/{id} over HTTP."""
-
-    def __init__(self, base_url: str, client: httpx.Client | None = None) -> None:
-        self._base = base_url.rstrip("/")
-        self._client = client
-
-    def _get(self, path: str) -> dict[str, Any]:
-        url = f"{self._base}{path}"
-        if self._client is not None:
-            resp = self._client.get(url)
-        else:
-            with httpx.Client(timeout=30.0) as c:
-                resp = c.get(url)
-        resp.raise_for_status()
-        result: dict[str, Any] = resp.json()
-        return result
-
-    def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
-        url = f"{self._base}{path}"
-        if self._client is not None:
-            resp = self._client.post(url, json=body)
-        else:
-            with httpx.Client(timeout=30.0) as c:
-                resp = c.post(url, json=body)
-        resp.raise_for_status()
-        result: dict[str, Any] = resp.json()
-        return result
 
     def submit_auth_request(self, auth_packet: dict[str, Any]) -> dict[str, Any]:
         return self._post("/prior-auth/submit", auth_packet)
@@ -86,34 +75,8 @@ class PriorAuthHttpClient:
         return self._get(f"/prior-auth/status/{auth_id}")
 
 
-class ClaimsHttpClient:
+class ClaimsHttpClient(_BaseHttpClient):
     """ClaimsBackend that calls /claims/* endpoints over HTTP."""
-
-    def __init__(self, base_url: str, client: httpx.Client | None = None) -> None:
-        self._base = base_url.rstrip("/")
-        self._client = client
-
-    def _get(self, path: str) -> dict[str, Any]:
-        url = f"{self._base}{path}"
-        if self._client is not None:
-            resp = self._client.get(url)
-        else:
-            with httpx.Client(timeout=30.0) as c:
-                resp = c.get(url)
-        resp.raise_for_status()
-        result: dict[str, Any] = resp.json()
-        return result
-
-    def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
-        url = f"{self._base}{path}"
-        if self._client is not None:
-            resp = self._client.post(url, json=body)
-        else:
-            with httpx.Client(timeout=30.0) as c:
-                resp = c.post(url, json=body)
-        resp.raise_for_status()
-        result: dict[str, Any] = resp.json()
-        return result
 
     def scrub_claim(self, claim_payload: dict[str, Any]) -> dict[str, Any]:
         return self._post("/claims/scrub", claim_payload)
