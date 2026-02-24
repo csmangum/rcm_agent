@@ -1,0 +1,11 @@
+{
+  "encounter_id": "ENC-008",
+  "patient": {"age": 55, "gender": "M", "zip": "10001"},
+  "insurance": {"payer": "AuthDenyPayer", "member_id": "AUTH-DENY-001", "plan_type": "PPO"},
+  "date": "2026-02-16",
+  "type": "outpatient_procedure",
+  "procedures": [{"code": "73721", "description": "MRI knee without contrast"}],
+  "diagnoses": [{"code": "M25.561", "description": "Pain in right knee"}],
+  "clinical_notes": "Knee pain, MRI ordered. Prior auth required. Use RCM_PRIOR_AUTH_MOCK_DENY_PAYER=AuthDenyPayer for eval.",
+  "documents": ["clinic_note.txt"]
+}

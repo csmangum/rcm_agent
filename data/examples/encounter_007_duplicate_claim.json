@@ -1,0 +1,16 @@
+{
+  "encounter_id": "ENC-007",
+  "patient": {"age": 40, "gender": "M", "zip": "10001"},
+  "insurance": {"payer": "Aetna", "member_id": "AET123456789", "plan_type": "PPO"},
+  "date": "2026-02-15",
+  "type": "outpatient_procedure",
+  "procedures": [{"code": "99213", "description": "Office visit, established patient, low complexity"}],
+  "diagnoses": [{"code": "J06.9", "description": "Acute upper respiratory infection, unspecified"}],
+  "clinical_notes": "Duplicate claim - same service already paid. CO-18. Resubmission not appropriate.",
+  "documents": ["denial_letter.pdf"],
+  "denial_info": {
+    "claim_id": "CLM-007",
+    "reason_codes": ["CO-18"],
+    "denial_date": "2026-02-10"
+  }
+}

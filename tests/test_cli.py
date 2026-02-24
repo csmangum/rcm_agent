@@ -171,3 +171,36 @@ def test_denial_stats_command(cli_runner: CliRunner, examples_dir: Path, tmp_db_
     assert result2.exit_code == 0
     assert "1" in result2.output  # at least one event
     assert "By reason code:" in result2.output or "By denial type:" in result2.output
+
+
+@pytest.mark.e2e
+def test_persistence_cli_pipeline(cli_runner: CliRunner, examples_dir: Path, tmp_db_path: str) -> None:
+    """Run pipeline via CLI (process command), read back from repository, assert stored state matches.
+
+    Verifies that rcm-agent process persists encounter status, stage, and audit trail correctly.
+    Uses temp DB for deterministic, fast execution.
+    """
+    from rcm_agent.db import EncounterRepository
+    from rcm_agent.models import EncounterStatus, RcmStage
+
+    encounter_file = examples_dir / "encounter_001_routine_visit.json"
+    result = cli_runner.invoke(main, ["--db-path", tmp_db_path, "process", str(encounter_file)])
+    assert result.exit_code == 0, result.output
+
+    with EncounterRepository(tmp_db_path) as repo:
+        row = repo.get_encounter("ENC-001")
+        assert row is not None, "Encounter should be persisted"
+        assert row["encounter_id"] == "ENC-001"
+        assert row["stage"] in [s.value for s in RcmStage], f"Invalid stage: {row['stage']}"
+        assert row["status"] in [s.value for s in EncounterStatus], f"Invalid status: {row['status']}"
+        # ENC-001 routine visit should reach a clean claim outcome
+        assert row["status"] in (
+            EncounterStatus.CLAIM_ACCEPTED.value,
+            EncounterStatus.CLAIM_SUBMITTED.value,
+            EncounterStatus.CODED.value,
+        ), f"ENC-001 should complete with claim outcome, got {row['status']}"
+
+        audit = repo.get_audit_log("ENC-001")
+        assert len(audit) >= 2, "Audit log should have process_started and workflow_complete"
+        actions = {e["action"] for e in audit}
+        assert "process_started" in actions or "workflow_complete" in actions

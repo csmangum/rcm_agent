@@ -1,21 +1,72 @@
 {
   "ENC-001": {
-    "expected_stages": ["CODING_CHARGE_CAPTURE", "CLAIMS_SUBMISSION"],
-    "expected_final_status": "CLAIM_SUBMITTED",
+    "expected_stages": [
+      "CODING_CHARGE_CAPTURE",
+      "CLAIMS_SUBMISSION"
+    ],
+    "expected_final_status": "CLAIM_ACCEPTED",
     "needs_prior_auth": false,
     "description": "Routine office visit (Aetna, eligible)"
   },
   "ENC-002": {
-    "expected_stages": ["PRIOR_AUTHORIZATION", "CODING_CHARGE_CAPTURE", "CLAIMS_SUBMISSION"],
+    "expected_stages": [
+      "PRIOR_AUTHORIZATION",
+      "CODING_CHARGE_CAPTURE",
+      "CLAIMS_SUBMISSION"
+    ],
     "expected_final_status": "CLAIM_SUBMITTED",
     "needs_prior_auth": true,
     "expected_auth_outcome": "approved",
     "description": "MRI knee with prior auth (UnitedHealthcare)"
   },
+  "ENC-003": {
+    "expected_stages": [
+      "HUMAN_ESCALATION"
+    ],
+    "expected_final_status": "NEEDS_REVIEW",
+    "needs_prior_auth": false,
+    "expected_escalation": true,
+    "description": "Inpatient surgery (high charges) - triggers escalation"
+  },
   "ENC-004": {
-    "expected_stages": ["DENIAL_APPEAL"],
+    "expected_stages": [
+      "DENIAL_APPEAL"
+    ],
     "expected_final_status": null,
     "needs_prior_auth": false,
     "description": "Denial scenario (Cigna) - appeal workflow"
+  },
+  "ENC-005": {
+    "expected_stages": [
+      "ELIGIBILITY_VERIFICATION"
+    ],
+    "expected_final_status": "NOT_ELIGIBLE",
+    "needs_prior_auth": false,
+    "description": "Eligibility mismatch - member terminated (Anthem)"
+  },
+  "ENC-006": {
+    "expected_stages": [
+      "DENIAL_APPEAL"
+    ],
+    "expected_final_status": null,
+    "needs_prior_auth": false,
+    "description": "Denial CO-4 only - appeal workflow (UnitedHealthcare)"
+  },
+  "ENC-007": {
+    "expected_stages": [
+      "DENIAL_APPEAL"
+    ],
+    "expected_final_status": "CLAIM_DENIED",
+    "needs_prior_auth": false,
+    "description": "Duplicate claim (CO-18) - appeal not viable"
+  },
+  "ENC-008": {
+    "expected_stages": [
+      "PRIOR_AUTHORIZATION"
+    ],
+    "expected_final_status": "AUTH_DENIED",
+    "needs_prior_auth": true,
+    "expected_auth_outcome": "denied",
+    "description": "Prior auth denied - requires RCM_PRIOR_AUTH_MOCK_DENY_PAYER=AuthDenyPayer"
   }
 }
