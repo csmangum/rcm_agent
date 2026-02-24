@@ -5,6 +5,7 @@ from typing import Any
 from rcm_agent.config import get_cpt_charge_amounts, get_default_charge
 from rcm_agent.integrations.registry import get_claims_backend
 from rcm_agent.models import Encounter, EncounterType
+from rcm_agent.observability.logging import get_logger
 from rcm_agent.tools._types import (
     ClaimLineItem,
     CleanClaimData,
@@ -12,6 +13,8 @@ from rcm_agent.tools._types import (
     ScrubResult,
     SubmitClaimResult,
 )
+
+logger = get_logger(__name__)
 
 # Mock NPI keyed by provider/facility; real implementation would look up from config or encounter.
 _MOCK_NPI = "1234567890"
@@ -105,30 +108,45 @@ def _description_for_cpt(encounter: Encounter, cpt: str) -> str:
 def scrub_claim(claim_data: CleanClaimData | dict[str, Any]) -> ScrubResult:
     """Run pre-submission edits/validation via the configured claims backend."""
     result = get_claims_backend().scrub_claim(dict(claim_data))
-    return ScrubResult(
+    out = ScrubResult(
         clean=result["clean"],
         errors=result.get("errors", []),
         warnings=result.get("warnings", []),
         edit_actions=result.get("edit_actions", []),
     )
+    logger.info(
+        "Tool call: scrub_claim",
+        action="tool_call",
+        tool="scrub_claim",
+        clean=out["clean"],
+    )
+    return out
 
 
 def submit_claim(claim_data: CleanClaimData | dict[str, Any]) -> SubmitClaimResult:
     """Submit a claim via the configured claims backend."""
     result = get_claims_backend().submit_claim(dict(claim_data))
-    return SubmitClaimResult(
+    out = SubmitClaimResult(
         claim_id=result.get("claim_id"),
         status=result["status"],
         submitted_at=result["submitted_at"],
         message=result.get("message", ""),
         tracking_number=result.get("tracking_number"),
     )
+    logger.info(
+        "Tool call: submit_claim",
+        action="tool_call",
+        tool="submit_claim",
+        claim_id=out["claim_id"],
+        status=out["status"],
+    )
+    return out
 
 
 def check_remit_status(claim_id: str) -> RemitStatusResult:
     """Check remittance / payment status for a submitted claim."""
     result = get_claims_backend().get_remit(claim_id)
-    return RemitStatusResult(
+    out = RemitStatusResult(
         claim_id=result.get("claim_id"),
         status=result["status"],
         paid_amount=result.get("paid_amount"),
@@ -139,3 +157,11 @@ def check_remit_status(claim_id: str) -> RemitStatusResult:
         remit_date=result.get("remit_date"),
         message=result.get("message"),
     )
+    logger.info(
+        "Tool call: check_remit_status",
+        action="tool_call",
+        tool="check_remit_status",
+        claim_id=out["claim_id"],
+        status=out["status"],
+    )
+    return out

@@ -4,11 +4,14 @@ from typing import Any
 
 from rcm_agent.integrations.registry import get_eligibility_backend
 from rcm_agent.models import Insurance, Patient
+from rcm_agent.observability.logging import get_logger
 from rcm_agent.tools._types import (
     BenefitsResult,
     CoordinationOfBenefitsResult,
     EligibilityResult,
 )
+
+logger = get_logger(__name__)
 
 
 def check_member_eligibility(
@@ -18,7 +21,7 @@ def check_member_eligibility(
 ) -> EligibilityResult:
     """Return eligibility status, plan details, effective/term dates from backend."""
     result: dict[str, Any] = get_eligibility_backend().check_member_eligibility(payer, member_id, date_of_service)
-    return EligibilityResult(
+    out = EligibilityResult(
         eligible=result["eligible"],
         plan_name=result["plan_name"],
         effective_date=result.get("effective_date"),
@@ -27,6 +30,15 @@ def check_member_eligibility(
         member_status=result["member_status"],
         date_of_service=result["date_of_service"],
     )
+    logger.info(
+        "Tool call: check_member_eligibility",
+        action="tool_call",
+        tool="check_member_eligibility",
+        payer=payer,
+        member_id=member_id,
+        eligible=out["eligible"],
+    )
+    return out
 
 
 def verify_benefits(
@@ -36,11 +48,20 @@ def verify_benefits(
 ) -> BenefitsResult:
     """Return covered/not covered, copay, coinsurance, deductible per procedure from backend."""
     result: dict[str, Any] = get_eligibility_backend().verify_benefits(payer, member_id, procedure_codes)
-    return BenefitsResult(
+    out = BenefitsResult(
         payer=result["payer"],
         member_id=result["member_id"],
         procedures=result["procedures"],
     )
+    logger.info(
+        "Tool call: verify_benefits",
+        action="tool_call",
+        tool="verify_benefits",
+        payer=payer,
+        member_id=member_id,
+        procedure_count=len(result["procedures"]),
+    )
+    return out
 
 
 def check_coordination_of_benefits(patient: Patient, insurance: Insurance) -> CoordinationOfBenefitsResult:
