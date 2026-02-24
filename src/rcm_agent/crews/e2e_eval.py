@@ -134,8 +134,6 @@ class E2ESummary:
             else 0.0
         )
 
-    pipeline_mode: str = "multi"
-
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
             "total": self.total,

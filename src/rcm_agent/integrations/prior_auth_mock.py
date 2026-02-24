@@ -32,15 +32,16 @@ class PriorAuthMock:
         now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         payer = (auth_packet.get("payer") or "").strip()
         decision = "denied" if _get_deny_payer() and payer == _get_deny_payer() else None
+        status = "denied" if decision == "denied" else "submitted"
         self._store[auth_id] = {
             "auth_packet": auth_packet,
-            "status": "denied" if decision == "denied" else "submitted",
+            "status": status,
             "decision": decision,
             "submitted_at": now,
         }
         return {
             "auth_id": auth_id,
-            "status": "submitted",
+            "status": status,
             "submitted_at": now,
             "message": "Prior auth request submitted successfully (mock).",
         }
