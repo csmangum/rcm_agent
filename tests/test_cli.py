@@ -174,9 +174,7 @@ def test_denial_stats_command(cli_runner: CliRunner, examples_dir: Path, tmp_db_
 
 
 @pytest.mark.e2e
-def test_persistence_cli_pipeline(
-    cli_runner: CliRunner, examples_dir: Path, tmp_db_path: str
-) -> None:
+def test_persistence_cli_pipeline(cli_runner: CliRunner, examples_dir: Path, tmp_db_path: str) -> None:
     """Run pipeline via CLI (process command), read back from repository, assert stored state matches.
 
     Verifies that rcm-agent process persists encounter status, stage, and audit trail correctly.

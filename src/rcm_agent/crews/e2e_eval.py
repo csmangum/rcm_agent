@@ -11,9 +11,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 from rcm_agent.crews.main_crew import process_encounter, process_encounter_multi_stage
 from rcm_agent.crews.router_eval import _default_examples_dir, _default_golden_path, load_encounters_from_dir
@@ -394,6 +395,9 @@ def _run_e2e_pass(
             is_success = escalated and last is not None and final_status == (expected_final or "NEEDS_REVIEW")
         elif expected_final and expected_final in (s.value for s in _FAILURE_STATUSES):
             is_success = not escalated and last is not None and final_status == expected_final
+        elif expected_final == "NEEDS_REVIEW":
+            # Golden explicitly expects NEEDS_REVIEW (e.g. ENC-002: pipeline stops after coding)
+            is_success = not escalated and last is not None and final_status == "NEEDS_REVIEW"
         else:
             is_success = (
                 not escalated
