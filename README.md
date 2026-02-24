@@ -50,10 +50,24 @@ rcm-agent metrics
 rcm-agent denial-stats   # denial analytics (reason codes, type, payer)
 ```
 
+## Evaluation
+
+The eval suite measures router agreement and e2e pipeline success. Set `OPENAI_API_KEY` in `.env` for LLM-backed evals.
+
+```bash
+rcm-agent eval-router -o reports/router_eval.json   # heuristic vs LLM routing
+rcm-agent eval-e2e -o reports/e2e_eval.json          # full pipeline on synthetic encounters
+rcm-agent eval-all -o reports                        # router + e2e, writes both reports
+```
+
+See [docs/EVAL.md](docs/EVAL.md) for metrics, golden data, and how to run e2e tests (`pytest -m e2e`).
+
 ## Tests
 
 ```bash
-pytest
+pytest                              # default: excludes llm and e2e
+pytest -m "not llm and not e2e"      # CI mode
+pytest -m e2e                       # e2e tests (requires OPENAI_API_KEY)
 ```
 
 ## Project structure

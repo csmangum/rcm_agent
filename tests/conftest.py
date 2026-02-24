@@ -4,6 +4,10 @@ import json
 from pathlib import Path
 
 import pytest
+from dotenv import load_dotenv
+
+# Load .env so OPENAI_API_KEY and other vars are available for LLM/e2e tests
+load_dotenv()
 
 from rcm_agent.integrations.registry import get_claims_backend, get_prior_auth_backend
 from rcm_agent.models import Encounter

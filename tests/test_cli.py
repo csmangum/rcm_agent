@@ -1,11 +1,13 @@
 """Unit tests for CLI commands."""
 
+import json
 from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
 
 from rcm_agent.main import main
+from rcm_agent.models import EncounterOutput, EncounterStatus, RcmStage
 
 
 @pytest.fixture
@@ -86,6 +88,65 @@ def test_help(cli_runner: CliRunner) -> None:
     assert "history" in result.output
     assert "metrics" in result.output
     assert "denial-stats" in result.output
+    assert "eval-router" in result.output
+    assert "eval-e2e" in result.output
+    assert "eval-all" in result.output
+
+
+def test_eval_router_command(cli_runner: CliRunner, examples_dir: Path, tmp_path: Path) -> None:
+    """eval-router runs heuristic comparison, writes report."""
+    output = tmp_path / "router_report.json"
+    result = cli_runner.invoke(
+        main,
+        ["eval-router", "--examples-dir", str(examples_dir), "-o", str(output)],
+    )
+    assert result.exit_code == 0
+    assert "Encounters evaluated:" in result.output
+    assert "Agreement rate:" in result.output
+    assert output.exists()
+    data = json.loads(output.read_text())
+    assert "total" in data
+    assert "records" in data
+
+
+def test_eval_e2e_command_mocked(cli_runner: CliRunner, examples_dir: Path, tmp_path: Path) -> None:
+    """eval-e2e runs (with mocked pipeline in unit tests, real in e2e)."""
+    from unittest.mock import patch
+
+    with patch("rcm_agent.crews.e2e_eval.process_encounter_multi_stage") as mock:
+        mock.return_value = [
+            EncounterOutput(
+                encounter_id="ENC-001",
+                stage=RcmStage.CODING_CHARGE_CAPTURE,
+                status=EncounterStatus.CODED,
+                actions_taken=[],
+                artifacts=[],
+                message="Coded",
+                raw_result={},
+            ),
+            EncounterOutput(
+                encounter_id="ENC-001",
+                stage=RcmStage.CLAIMS_SUBMISSION,
+                status=EncounterStatus.CLAIM_SUBMITTED,
+                actions_taken=[],
+                artifacts=[],
+                message="Submitted",
+                raw_result={},
+            ),
+        ]
+        result = cli_runner.invoke(
+            main,
+            [
+                "eval-e2e",
+                "--examples-dir",
+                str(examples_dir),
+                "-o",
+                str(tmp_path / "e2e_report.json"),
+            ],
+        )
+    assert result.exit_code == 0
+    assert "Pipeline success rate:" in result.output
+    assert (tmp_path / "e2e_report.json").exists()
 
 
 def test_process_encounter_004_denial_crew(cli_runner: CliRunner, examples_dir: Path, tmp_db_path: str) -> None:
