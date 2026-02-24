@@ -1,0 +1,54 @@
+{
+  "suggested_codes": {
+    "icd_codes": [
+      {
+        "code": "M23.211",
+        "description": "Derangement of medial meniscus due to old tear, right knee",
+        "confidence": 0.85
+      }
+    ],
+    "cpt_codes": [
+      {
+        "code": "29881",
+        "description": "Derangement of medial meniscus due to old tear, right knee",
+        "confidence": 0.85
+      }
+    ],
+    "confidence": 0.85,
+    "message": "Suggested 1 ICD code(s), 1 CPT code(s) for encounter type outpatient_procedure."
+  },
+  "coding_guidelines_snippets": [
+    "No guideline snippet on file; refer to current CPT/ICD-10 guidelines."
+  ],
+  "validation": {
+    "valid": true,
+    "invalid_pairs": [],
+    "modifier_suggestions": []
+  },
+  "missing_charges": {
+    "missing_codes": [
+      "73721"
+    ],
+    "missing_charge_flags": [
+      "Documented procedure(s) not in suggested set: ['73721']",
+      "Suggested code(s) not documented in encounter: ['29881']"
+    ],
+    "documented_procedures": [
+      "73721"
+    ],
+    "suggested_cpts": [
+      "29881"
+    ]
+  },
+  "reimbursement": {
+    "payer": "UnitedHealthcare",
+    "per_code": [
+      {
+        "cpt_code": "29881",
+        "expected_amount": 200.0
+      }
+    ],
+    "total_expected": 200.0
+  },
+  "confidence": 0.85
+}
