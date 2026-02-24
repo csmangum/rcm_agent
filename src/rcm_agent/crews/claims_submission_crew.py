@@ -100,9 +100,7 @@ def run_claims_submission_crew(
     artifacts.append(remit_artifact)
 
     remit_status = remit_result.get("status", "pending")
-    normalized_status = (
-        "paid" if remit_status == "paid" else "denied" if remit_status == "denied" else "pending"
-    )
+    normalized_status = "paid" if remit_status == "paid" else "denied" if remit_status == "denied" else "pending"
     claim_id_display = claim_id or "unknown"
 
     if not claim_id:
@@ -111,7 +109,9 @@ def run_claims_submission_crew(
     elif normalized_status == "paid":
         encounter_status = EncounterStatus.CLAIM_ACCEPTED
         paid = remit_result.get("paid_amount") or 0.0
-        message = f"Claim {claim_id_display} accepted and paid ${paid:,.2f}; tracking={submit_result.get('tracking_number')}."
+        message = (
+            f"Claim {claim_id_display} accepted and paid ${paid:,.2f}; tracking={submit_result.get('tracking_number')}."
+        )
     elif normalized_status == "denied":
         encounter_status = EncounterStatus.CLAIM_DENIED
         message = f"Claim {claim_id_display} denied by payer; see remittance for CARC/RARC details."
