@@ -57,6 +57,7 @@ cover/
 
 # RCM Agent
 data/artifacts/
+reports/
 data/rcm.db
 data/rag_corpus/*.index
 

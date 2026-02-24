@@ -230,7 +230,10 @@ def denial_stats(ctx: click.Context) -> None:
     help="Path to write JSON evaluation report.",
 )
 def eval_router(examples_dir: str | None, output: str | None) -> None:
-    """Evaluate router: compare heuristic vs LLM classifications across encounters."""
+    """Evaluate router: compare heuristic vs LLM classifications across encounters.
+
+    LLM is on by default; set RCM_ROUTER_LLM_ENABLED=false for heuristic-only. Requires OPENAI_API_KEY for LLM.
+    """
     from rcm_agent.crews.router_eval import run_evaluation
 
     summary = run_evaluation(examples_dir=examples_dir, output_path=output)
@@ -248,6 +251,110 @@ def eval_router(examples_dir: str | None, output: str | None) -> None:
             click.echo(f"  {r.encounter_id}: [{marker}] heuristic={r.heuristic_stage} llm={r.llm_stage or 'N/A'}")
             if r.notes:
                 click.echo(f"    {r.notes}")
+
+
+@main.command("eval-e2e")
+@click.option(
+    "--examples-dir",
+    default=None,
+    type=click.Path(exists=True, path_type=str),
+    help="Directory containing encounter JSON files (default: data/examples).",
+)
+@click.option(
+    "--golden",
+    default=None,
+    type=click.Path(path_type=str),
+    help="Path to golden.json with expected stages (default: data/eval/golden.json).",
+)
+@click.option(
+    "--output",
+    "-o",
+    default=None,
+    type=click.Path(path_type=str),
+    help="Path to write JSON evaluation report.",
+)
+def eval_e2e(
+    examples_dir: str | None,
+    golden: str | None,
+    output: str | None,
+) -> None:
+    """Run full pipeline e2e evaluation on synthetic encounters.
+
+    Requires OPENAI_API_KEY in .env for LLM-backed crews.
+    """
+    from rcm_agent.crews.e2e_eval import run_e2e_evaluation
+
+    summary = run_e2e_evaluation(
+        examples_dir=examples_dir,
+        golden_path=golden,
+        output_path=output,
+    )
+    click.echo(f"Encounters evaluated: {summary.total}")
+    click.echo(f"Pipeline success rate: {summary.pipeline_success_rate:.1%}")
+    click.echo(f"Escalations: {summary.escalations}")
+    click.echo(f"Prior auth coverage: {summary.prior_auth_produced_count}/{summary.prior_auth_needed_count}")
+    click.echo(f"Claim readiness: {summary.reached_claims_count}/{summary.total}")
+    click.echo(f"Router alignment (vs golden): {summary.router_aligned_count}/{summary.golden_compared_count}")
+    if summary.records:
+        click.echo("\nPer-encounter details:")
+        for r in summary.records:
+            status = "OK" if r.success else "ERROR"
+            click.echo(f"  {r.encounter_id}: [{status}] stages={r.stages_run} -> {r.final_status}")
+            if r.error:
+                click.echo(f"    {r.error}")
+
+
+@main.command("eval-all")
+@click.option(
+    "--examples-dir",
+    default=None,
+    type=click.Path(exists=True, path_type=str),
+    help="Directory containing encounter JSON files (default: data/examples).",
+)
+@click.option(
+    "--golden",
+    default=None,
+    type=click.Path(path_type=str),
+    help="Path to golden.json for e2e eval (default: repo data/eval/golden.json).",
+)
+@click.option(
+    "--output-dir",
+    "-o",
+    default="reports",
+    type=click.Path(file_okay=False, dir_okay=True, path_type=str),
+    help="Directory to write evaluation reports (default: reports).",
+)
+def eval_all(examples_dir: str | None, golden: str | None, output_dir: str | None) -> None:
+    """Run full eval suite: router eval + e2e eval. Writes reports to output dir.
+
+    Requires OPENAI_API_KEY in .env for LLM-backed evals.
+    """
+    from pathlib import Path
+
+    from rcm_agent.crews.e2e_eval import run_e2e_evaluation
+    from rcm_agent.crews.router_eval import run_evaluation
+
+    out = Path(output_dir or "reports")
+    out.mkdir(parents=True, exist_ok=True)
+
+    click.echo("Running router evaluation...")
+    router_summary = run_evaluation(
+        examples_dir=examples_dir,
+        output_path=out / "router_eval.json",
+    )
+    click.echo(f"  Router: {router_summary.agreement_rate:.1%} agreement")
+
+    click.echo("Running e2e evaluation...")
+    e2e_summary = run_e2e_evaluation(
+        examples_dir=examples_dir,
+        golden_path=golden,
+        output_dir=out,
+    )
+    click.echo(f"  E2E: {e2e_summary.pipeline_success_rate:.1%} success rate")
+
+    click.echo(f"\nReports written to {out}/")
+    click.echo("  - router_eval.json")
+    click.echo("  - e2e_eval.json")
 
 
 @main.command("process-multi")

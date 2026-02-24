@@ -27,21 +27,30 @@ logger = logging.getLogger(__name__)
 _PROJECT_ROOT_MARKER = "pyproject.toml"
 
 
+def _project_root() -> Path:
+    """Resolve project root by walking up from this file looking for pyproject.toml."""
+    path = Path(__file__).resolve().parent
+    for _ in range(6):
+        if (path / _PROJECT_ROOT_MARKER).is_file():
+            return path
+        if path.parent == path:
+            break
+        path = path.parent
+    # Fallback: crews -> rcm_agent -> src -> project root = 3 parents from crews
+    return Path(__file__).resolve().parent.parent.parent.parent
+
+
 def _default_examples_dir() -> Path:
     """Resolve default examples directory: RCM_EXAMPLES_DIR env, else repo root / data / examples."""
     env_dir = os.environ.get("RCM_EXAMPLES_DIR", "").strip()
     if env_dir:
         return Path(env_dir).expanduser().resolve()
-    # Walk up from this file to find pyproject.toml (repo root)
-    path = Path(__file__).resolve().parent
-    for _ in range(6):
-        if (path / _PROJECT_ROOT_MARKER).is_file():
-            return path / "data" / "examples"
-        if path.parent == path:
-            break
-        path = path.parent
-    # Fallback: same as before (crews -> rcm_agent -> src -> project root = 3 parents from crews)
-    return Path(__file__).resolve().parent.parent.parent.parent / "data" / "examples"
+    return _project_root() / "data" / "examples"
+
+
+def _default_golden_path() -> Path:
+    """Resolve default golden expectations path: repo root / data / eval / golden.json."""
+    return _project_root() / "data" / "eval" / "golden.json"
 
 
 @dataclass
@@ -117,14 +126,14 @@ class EvalSummary:
 def evaluate_encounter(encounter: Encounter) -> EvalRecord:
     """Run both heuristic and LLM classification on a single encounter.
 
-    LLM classification is only performed when RCM_ROUTER_LLM_ENABLED is set to a
-    truthy value, keeping evaluation deterministic by default.
+    LLM classification runs by default; set RCM_ROUTER_LLM_ENABLED=false to use
+    heuristic-only (deterministic) evaluation.
     """
     heuristic = classify_encounter(encounter)
     heuristic_multi = classify_encounter_multi_stage(encounter)
     llm_result: MultiStageRouterResult | None = None
 
-    llm_enabled = os.environ.get("RCM_ROUTER_LLM_ENABLED", "false").strip().lower() in ("true", "1", "yes", "on")
+    llm_enabled = os.environ.get("RCM_ROUTER_LLM_ENABLED", "true").strip().lower() in ("true", "1", "yes", "on")
     if llm_enabled:
         try:
             llm_result = llm_classify_encounter(encounter)

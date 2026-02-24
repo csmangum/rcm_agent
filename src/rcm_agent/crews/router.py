@@ -54,8 +54,8 @@ class MultiStageRouterResult(BaseModel):
 
 
 def _llm_router_enabled() -> bool:
-    """True if LLM-based router fallback is enabled (default: false)."""
-    raw = os.environ.get("RCM_ROUTER_LLM_ENABLED", "false")
+    """True if LLM-based router fallback is enabled (default: true)."""
+    raw = os.environ.get("RCM_ROUTER_LLM_ENABLED", "true")
     return raw.strip().lower() in ("true", "1", "yes", "on")
 
 
