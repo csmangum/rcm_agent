@@ -224,6 +224,9 @@ def llm_classify_encounter(encounter: Encounter) -> MultiStageRouterResult | Non
     reasoning_parts: list[str] = []
 
     for sd in stage_dicts:
+        if not isinstance(sd, dict):
+            logger.warning("LLM returned non-dict stage entry: %s", sd)
+            continue
         stage_name = sd.get("stage", "")
         try:
             stage = RcmStage(stage_name)
@@ -232,7 +235,10 @@ def llm_classify_encounter(encounter: Encounter) -> MultiStageRouterResult | Non
             continue
         if stage in (RcmStage.INTAKE, RcmStage.HUMAN_ESCALATION):
             continue
-        confidence = float(sd.get("confidence", 0.5))
+        try:
+            confidence = float(sd.get("confidence") or 0.5)
+        except (TypeError, ValueError):
+            confidence = 0.5
         reasoning = sd.get("reasoning", "")
         stages.append(stage)
         results.append(RouterResult(stage=stage, confidence=confidence, reasoning=reasoning))

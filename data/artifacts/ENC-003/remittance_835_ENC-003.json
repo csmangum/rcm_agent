@@ -1,7 +1,7 @@
 {
   "encounter_id": "ENC-003",
-  "claim_id": "CLM-01D5BE6D",
-  "tracking_number": "TRK-61EB66",
+  "claim_id": "CLM-B02B46A4",
+  "tracking_number": "TRK-EF8911",
   "payer": "Blue Cross Blue Shield",
   "member_id": "BCBS555111222",
   "date_of_service": "2026-02-12",
@@ -23,8 +23,8 @@
       "description": "Coinsurance amount (20%)."
     }
   ],
-  "check_number": "CHK-E42844",
-  "remit_date": "2026-02-24T05:27:21Z",
+  "check_number": "CHK-93F599",
+  "remit_date": "2026-02-24T16:37:45Z",
   "status": "paid",
   "line_items": [
     {
