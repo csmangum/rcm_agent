@@ -34,4 +34,4 @@ def test_e2e_eval_full_pipeline(examples_dir, tmp_path):
     assert len(summary.records) == summary.total
     assert output_path.exists()
     # At least one encounter should complete (exact success rate depends on mock backends)
-    assert summary.pipeline_successes >= 0
+    assert summary.pipeline_successes >= 1

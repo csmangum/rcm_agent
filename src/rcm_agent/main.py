@@ -298,7 +298,7 @@ def eval_e2e(
     if summary.records:
         click.echo("\nPer-encounter details:")
         for r in summary.records:
-            status = "OK" if not r.error else "ERROR"
+            status = "OK" if r.success else "ERROR"
             click.echo(f"  {r.encounter_id}: [{status}] stages={r.stages_run} -> {r.final_status}")
             if r.error:
                 click.echo(f"    {r.error}")
