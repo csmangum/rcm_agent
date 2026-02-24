@@ -433,12 +433,14 @@ class EncounterRepository:
             cur = conn.execute("SELECT COUNT(*) FROM encounters")
             total = cur.fetchone()[0]
 
-            escalated = by_status.get(EncounterStatus.ESCALATED, 0) + by_status.get(EncounterStatus.NEEDS_REVIEW, 0)
+            escalated = by_status.get(EncounterStatus.ESCALATED.value, 0) + by_status.get(
+                EncounterStatus.NEEDS_REVIEW.value, 0
+            )
             clean = (
-                by_status.get(EncounterStatus.CLAIM_ACCEPTED, 0)
-                + by_status.get(EncounterStatus.CODED, 0)
-                + by_status.get(EncounterStatus.ELIGIBLE, 0)
-                + by_status.get(EncounterStatus.AUTH_APPROVED, 0)
+                by_status.get(EncounterStatus.CLAIM_ACCEPTED.value, 0)
+                + by_status.get(EncounterStatus.CODED.value, 0)
+                + by_status.get(EncounterStatus.ELIGIBLE.value, 0)
+                + by_status.get(EncounterStatus.AUTH_APPROVED.value, 0)
             )
 
             denial_stats = self.get_denial_stats()
