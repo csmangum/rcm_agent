@@ -5,6 +5,8 @@ Planned: swap backends via registry or config (e.g. ELIGIBILITY_BACKEND, PRIOR_A
 """
 
 from rcm_agent.integrations.claims_stub import ClaimsStub
+from rcm_agent.integrations.eligibility_stub import EligibilityStub
+from rcm_agent.integrations.prior_auth_stub import PriorAuthStub
 from rcm_agent.integrations.protocols import (
     ClaimsBackend,
     EligibilityBackend,
@@ -15,5 +17,7 @@ __all__ = [
     "ClaimsBackend",
     "ClaimsStub",
     "EligibilityBackend",
+    "EligibilityStub",
     "PriorAuthBackend",
+    "PriorAuthStub",
 ]
