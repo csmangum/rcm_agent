@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from rcm_agent.crews.main_crew import process_encounter_multi_stage
-from rcm_agent.crews.router_eval import _default_examples_dir, load_encounters_from_dir
+from rcm_agent.crews.router_eval import _default_examples_dir, _default_golden_path, load_encounters_from_dir
 from rcm_agent.models import Encounter, EncounterOutput, EncounterStatus, RcmStage
 
 logger = logging.getLogger(__name__)
@@ -242,7 +242,7 @@ def run_e2e_evaluation(
         logger.warning("No encounters to evaluate")
         return E2ESummary()
 
-    golden = _load_golden(Path(golden_path) if golden_path else Path("data/eval/golden.json"))
+    golden = _load_golden(Path(golden_path) if golden_path else _default_golden_path())
 
     summary = E2ESummary()
     summary.total = len(encounters)
@@ -378,8 +378,9 @@ def _write_markdown_summary(summary: E2ESummary, path: Path) -> None:
         f"- **Escalations:** {summary.escalations}",
         f"- **Prior auth coverage:** {summary.prior_auth_produced_count}/{summary.prior_auth_needed_count}",
         f"- **Claim readiness:** {summary.reached_claims_count}/{summary.total}",
-        f"- **Router alignment (vs golden):** {summary.router_aligned_count}/{summary.golden_compared_count}",
     ]
+    if summary.golden_compared_count > 0:
+        lines.append(f"- **Router alignment (vs golden):** {summary.router_aligned_count}/{summary.golden_compared_count}")
     if summary.golden_final_status_count > 0:
         lines.append(f"- **Final status alignment (vs golden):** {summary.final_status_aligned_count}/{summary.golden_final_status_count}")
     if summary.golden_needs_prior_auth_count > 0:

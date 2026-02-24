@@ -28,7 +28,6 @@ def test_e2e_eval_full_pipeline(examples_dir: Path, tmp_path: Path) -> None:
     output_path = tmp_path / "e2e_eval.json"
     summary = run_e2e_evaluation(
         examples_dir=examples_dir,
-        golden_path="data/eval/golden.json",
         output_path=output_path,
     )
     assert summary.total > 0

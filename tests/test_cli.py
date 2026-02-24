@@ -147,6 +147,7 @@ def test_eval_e2e_command_mocked(cli_runner: CliRunner, examples_dir: Path, tmp_
     assert result.exit_code == 0
     assert "Pipeline success rate:" in result.output
     assert (tmp_path / "e2e_report.json").exists()
+    assert (tmp_path / "e2e_report.md").exists()
 
 
 def test_process_encounter_004_denial_crew(cli_runner: CliRunner, examples_dir: Path, tmp_db_path: str) -> None:

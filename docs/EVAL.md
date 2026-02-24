@@ -53,7 +53,7 @@ Requires `OPENAI_API_KEY` in `.env`.
 rcm-agent eval-all -o reports
 ```
 
-Writes `reports/router_eval.json` and `reports/e2e_eval.json` (plus `e2e_eval.md` summary).
+Writes `reports/router_eval.json` and `reports/e2e_eval.json` (plus `e2e_eval.md` summary). Use `--golden <path>` to override the default golden file (repo `data/eval/golden.json`) for e2e comparison.
 
 ### Pytest
 
@@ -79,6 +79,10 @@ Writes `reports/router_eval.json` and `reports/e2e_eval.json` (plus `e2e_eval.md
 ### E2E markdown summary (`e2e_eval.md`)
 
 Short human-readable summary with metrics and per-encounter table.
+
+## Artifacts
+
+Pipeline runs (e.g. process, e2e eval) can regenerate files under `data/artifacts/`. That directory is gitignored; avoid committing artifact-only churn in PRs.
 
 ## Golden Data
 

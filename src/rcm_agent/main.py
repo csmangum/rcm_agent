@@ -286,7 +286,7 @@ def eval_e2e(
 
     summary = run_e2e_evaluation(
         examples_dir=examples_dir,
-        golden_path=golden or "data/eval/golden.json",
+        golden_path=golden,
         output_path=output,
     )
     click.echo(f"Encounters evaluated: {summary.total}")
@@ -312,13 +312,19 @@ def eval_e2e(
     help="Directory containing encounter JSON files (default: data/examples).",
 )
 @click.option(
+    "--golden",
+    default=None,
+    type=click.Path(path_type=str),
+    help="Path to golden.json for e2e eval (default: repo data/eval/golden.json).",
+)
+@click.option(
     "--output-dir",
     "-o",
     default="reports",
     type=click.Path(file_okay=False, dir_okay=True, path_type=str),
     help="Directory to write evaluation reports (default: reports).",
 )
-def eval_all(examples_dir: str | None, output_dir: str | None) -> None:
+def eval_all(examples_dir: str | None, golden: str | None, output_dir: str | None) -> None:
     """Run full eval suite: router eval + e2e eval. Writes reports to output dir.
 
     Requires OPENAI_API_KEY in .env for LLM-backed evals.
@@ -341,7 +347,7 @@ def eval_all(examples_dir: str | None, output_dir: str | None) -> None:
     click.echo("Running e2e evaluation...")
     e2e_summary = run_e2e_evaluation(
         examples_dir=examples_dir,
-        golden_path="data/eval/golden.json",
+        golden_path=golden,
         output_dir=out,
     )
     click.echo(f"  E2E: {e2e_summary.pipeline_success_rate:.1%} success rate")
