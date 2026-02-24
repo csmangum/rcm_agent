@@ -3,6 +3,7 @@
 import json
 
 from rcm_agent.models import Encounter, EncounterOutput, EncounterStatus, RcmStage
+from rcm_agent.observability import get_logger
 from rcm_agent.tools._types import DenialAnalysis
 from rcm_agent.tools.appeal import (
     assemble_appeal_packet,
@@ -16,6 +17,8 @@ from rcm_agent.tools.denial import (
 )
 from rcm_agent.utils import save_artifact
 
+logger = get_logger(__name__)
+
 
 def run_denial_appeal_crew(encounter: Encounter) -> EncounterOutput:
     """
@@ -23,6 +26,12 @@ def run_denial_appeal_crew(encounter: Encounter) -> EncounterOutput:
     (if viable) search policies -> generate letter -> assemble packet.
     Returns EncounterOutput with denial analysis and optional appeal artifacts.
     """
+    logger.info(
+        "Denial appeal crew started",
+        encounter_id=encounter.encounter_id,
+        stage="DENIAL_APPEAL",
+        action="crew_started",
+    )
     actions: list[str] = ["parse_denial_reason_codes"]
     reason_codes = parse_denial_reason_codes(encounter)
 
@@ -53,6 +62,13 @@ def run_denial_appeal_crew(encounter: Encounter) -> EncounterOutput:
     message = viability_summary
 
     if appeal_viable:
+        logger.info(
+            "Appeal viable - generating appeal packet",
+            encounter_id=encounter.encounter_id,
+            stage="DENIAL_APPEAL",
+            action="appeal_viable",
+            denial_type=denial_type,
+        )
         actions.append("search_payer_policies_for_appeal")
         policy_snippets: list[str] = []
         for p in encounter.procedures:
@@ -79,8 +95,23 @@ def run_denial_appeal_crew(encounter: Encounter) -> EncounterOutput:
         status = EncounterStatus.NEEDS_REVIEW
         message = f"Appeal packet and letter prepared; {viability_summary}"
     else:
+        logger.info(
+            "Appeal not recommended",
+            encounter_id=encounter.encounter_id,
+            stage="DENIAL_APPEAL",
+            action="appeal_not_recommended",
+            denial_type=denial_type,
+        )
         message = f"Appeal not recommended. {viability_summary}"
 
+    logger.info(
+        "Denial appeal crew complete",
+        encounter_id=encounter.encounter_id,
+        stage="DENIAL_APPEAL",
+        action="crew_complete",
+        result=status.value,
+        appeal_viable=appeal_viable,
+    )
     return EncounterOutput(
         encounter_id=encounter.encounter_id,
         stage=RcmStage.DENIAL_APPEAL,

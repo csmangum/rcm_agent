@@ -6,12 +6,15 @@ from typing import Any
 
 from rcm_agent.integrations.registry import get_prior_auth_backend
 from rcm_agent.models import Encounter
+from rcm_agent.observability.logging import get_logger
 from rcm_agent.tools._types import (
     AuthPacket,
     AuthStatusResult,
     AuthSubmitResult,
     ClinicalIndicatorsResult,
 )
+
+logger = get_logger(__name__)
 
 # Keywords/phrases that indicate medical necessity and clinical indicators (heuristic extraction).
 _MEDICAL_NECESSITY_KEYWORDS = (
@@ -117,21 +120,37 @@ def assemble_auth_packet(
 def submit_auth_request(auth_packet: AuthPacket | dict[str, Any]) -> AuthSubmitResult:
     """Submit prior auth request via configured backend."""
     result: dict[str, Any] = get_prior_auth_backend().submit_auth_request(dict(auth_packet))
-    return AuthSubmitResult(
+    out = AuthSubmitResult(
         auth_id=result["auth_id"],
         status=result["status"],
         submitted_at=result["submitted_at"],
         message=result.get("message", ""),
     )
+    logger.info(
+        "Tool call: submit_auth_request",
+        action="tool_call",
+        tool="submit_auth_request",
+        auth_id=out["auth_id"],
+        status=out["status"],
+    )
+    return out
 
 
 def poll_auth_status(auth_id: str) -> AuthStatusResult:
     """Poll prior auth status via configured backend."""
     result: dict[str, Any] = get_prior_auth_backend().poll_auth_status(auth_id)
-    return AuthStatusResult(
+    out = AuthStatusResult(
         auth_id=result["auth_id"],
         status=result["status"],
         decision=result.get("decision"),
         decision_date=result.get("decision_date"),
         message=result.get("message", ""),
     )
+    logger.info(
+        "Tool call: poll_auth_status",
+        action="tool_call",
+        tool="poll_auth_status",
+        auth_id=out["auth_id"],
+        status=out["status"],
+    )
+    return out

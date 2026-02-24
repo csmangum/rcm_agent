@@ -2,6 +2,9 @@
 
 from rcm_agent.config import get_escalation_config
 from rcm_agent.models import Encounter, EncounterStatus, EscalationOutput, RcmStage
+from rcm_agent.observability.logging import get_logger
+
+logger = get_logger(__name__)
 
 # Oncology-related keywords in clinical notes
 _ONCOLOGY_KEYWORDS = ("oncology", "cancer", "tumor", "malignant", "carcinoma", "neoplasm")
@@ -69,9 +72,22 @@ def check_escalation(
             reasons.append("No documents attached")
 
     if not reasons:
+        logger.info(
+            "Escalation check passed",
+            encounter_id=encounter.encounter_id,
+            action="escalation_check",
+            result="pass",
+        )
         return None
 
     message = "Human review required: " + "; ".join(reasons)
+    logger.warning(
+        "Escalation check triggered",
+        encounter_id=encounter.encounter_id,
+        action="escalation_check",
+        result="escalate",
+        reasons=reasons,
+    )
     return EscalationOutput(
         encounter_id=encounter.encounter_id,
         reasons=reasons,

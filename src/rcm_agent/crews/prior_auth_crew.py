@@ -3,6 +3,7 @@
 import json
 
 from rcm_agent.models import Encounter, EncounterOutput, EncounterStatus, RcmStage
+from rcm_agent.observability import get_logger
 from rcm_agent.rag import get_payer_policy_backend
 from rcm_agent.tools.prior_auth import (
     assemble_auth_packet,
@@ -13,12 +14,20 @@ from rcm_agent.tools.prior_auth import (
 )
 from rcm_agent.utils import save_artifact
 
+logger = get_logger(__name__)
+
 
 def run_prior_auth_crew(encounter: Encounter) -> EncounterOutput:
     """
     Run prior auth workflow: extract indicators -> search policies -> assemble -> submit -> poll.
     Returns EncounterOutput with AUTH_APPROVED/AUTH_DENIED and auth packet artifact.
     """
+    logger.info(
+        "Prior auth crew started",
+        encounter_id=encounter.encounter_id,
+        stage="PRIOR_AUTHORIZATION",
+        action="crew_started",
+    )
     actions: list[str] = ["extract_clinical_indicators"]
     clinical_indicators = extract_clinical_indicators(encounter.clinical_notes or "")
 
@@ -44,6 +53,15 @@ def run_prior_auth_crew(encounter: Encounter) -> EncounterOutput:
     encounter_status = EncounterStatus.AUTH_APPROVED if decision == "approved" else EncounterStatus.AUTH_DENIED
     if decision == "pending":
         encounter_status = EncounterStatus.AUTH_REQUIRED
+
+    logger.info(
+        "Prior auth complete",
+        encounter_id=encounter.encounter_id,
+        stage="PRIOR_AUTHORIZATION",
+        action="auth_complete",
+        result=decision,
+        auth_id=auth_id,
+    )
 
     artifact_json = json.dumps(auth_packet, indent=2)
     artifact_filename = f"prior_auth_request_{encounter.encounter_id}.json"

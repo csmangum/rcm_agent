@@ -3,6 +3,7 @@
 import json
 
 from rcm_agent.models import Encounter, EncounterOutput, EncounterStatus, RcmStage
+from rcm_agent.observability import get_logger
 from rcm_agent.rag import get_coding_guidelines_backend
 from rcm_agent.tools.coding import (
     calculate_expected_reimbursement,
@@ -13,12 +14,20 @@ from rcm_agent.tools.coding import (
 )
 from rcm_agent.utils import save_artifact
 
+logger = get_logger(__name__)
+
 
 def run_coding_crew(encounter: Encounter) -> EncounterOutput:
     """
     Run coding workflow: suggest_codes -> validate_code_combinations -> identify_missing_charges -> calculate_expected_reimbursement.
     Returns EncounterOutput with status CODED and suggested codes, validation, reimbursement in raw_result.
     """
+    logger.info(
+        "Coding crew started",
+        encounter_id=encounter.encounter_id,
+        stage="CODING_CHARGE_CAPTURE",
+        action="crew_started",
+    )
     actions: list[str] = ["suggest_codes"]
     existing_icd = [d.code for d in encounter.diagnoses]
     existing_cpt = [p.code for p in encounter.procedures]
@@ -73,6 +82,16 @@ def run_coding_crew(encounter: Encounter) -> EncounterOutput:
             f"Coding complete; confidence={confidence:.2f}, "
             f"expected reimbursement=${reimbursement['total_expected']:,.2f}."
         )
+    logger.info(
+        "Coding crew complete",
+        encounter_id=encounter.encounter_id,
+        stage="CODING_CHARGE_CAPTURE",
+        action="coding_complete",
+        result=status.value,
+        confidence=confidence,
+        has_validation_issues=has_validation_issues,
+        has_missing_charges=has_missing_charge_flags,
+    )
     artifact_filename = f"coding_summary_{encounter.encounter_id}.json"
     save_artifact(encounter.encounter_id, artifact_filename, json.dumps(raw_result, indent=2))
     return EncounterOutput(

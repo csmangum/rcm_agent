@@ -6,7 +6,6 @@ Supports both single-stage (process_encounter) and multi-stage
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from rcm_agent.config import get_auth_required_procedures, get_cpt_charge_amounts
@@ -28,9 +27,10 @@ from rcm_agent.models import (
     PipelineContext,
     RcmStage,
 )
+from rcm_agent.observability import get_logger
 from rcm_agent.tools.logic import check_escalation
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 _DEFAULT_ESTIMATE = 500.0
 
@@ -49,6 +49,12 @@ def dispatch_to_crew(
     pipeline_context: PipelineContext | None = None,
 ) -> EncounterOutput:
     """Dispatch to specialized crew by stage; stub for INTAKE only."""
+    logger.info(
+        "Dispatching to crew",
+        encounter_id=encounter.encounter_id,
+        stage=stage.value,
+        action="crew_dispatch",
+    )
     if stage == RcmStage.ELIGIBILITY_VERIFICATION:
         return run_eligibility_crew(encounter)
     if stage == RcmStage.PRIOR_AUTHORIZATION:
@@ -105,6 +111,12 @@ def process_encounter(
         estimated_charges=estimated_charges,
     )
     if escalation is not None:
+        logger.info(
+            "Escalation triggered",
+            encounter_id=encounter.encounter_id,
+            action="escalation_decision",
+            reasons=escalation.reasons,
+        )
         return EncounterOutput(
             encounter_id=encounter.encounter_id,
             stage=RcmStage.HUMAN_ESCALATION,

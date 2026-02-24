@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from rcm_agent.db import EncounterRepository, init_db
+from rcm_agent.exceptions import DatabaseError
 from rcm_agent.models import (
     ClaimSubmission,
     Encounter,
@@ -183,10 +184,11 @@ def test_save_claim_submission(tmp_path: Path, sample_encounter: Encounter) -> N
 
 
 def test_update_status_nonexistent_encounter_id(tmp_path: Path) -> None:
-    """update_status with non-existent encounter_id does nothing and does not raise."""
+    """update_status with non-existent encounter_id raises DatabaseError."""
     db_path = str(tmp_path / "test.db")
     repo = EncounterRepository(db_path)
-    repo.update_status("NONEXISTENT", EncounterStatus.CODED, "noop")
+    with pytest.raises(DatabaseError, match="not found"):
+        repo.update_status("NONEXISTENT", EncounterStatus.CODED, "noop")
 
 
 def test_save_denial_event(tmp_path: Path, sample_encounter: Encounter) -> None:

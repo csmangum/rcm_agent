@@ -1,6 +1,7 @@
 """Registry for external backends. Implementation selected via config (env or future config file)."""
 
 from rcm_agent.config import get_integrations_config
+from rcm_agent.exceptions import ValidationError
 from rcm_agent.integrations.claims_mock import ClaimsMock
 from rcm_agent.integrations.eligibility_mock import EligibilityMock
 from rcm_agent.integrations.http_clients import ClaimsHttpClient, EligibilityHttpClient, PriorAuthHttpClient
@@ -44,7 +45,7 @@ def get_eligibility_backend() -> EligibilityBackend:
         else:
             impl = _ELIGIBILITY_BACKENDS.get(name)
             if impl is None:
-                raise ValueError(
+                raise ValidationError(
                     f"Unknown ELIGIBILITY_BACKEND={name!r}. "
                     f"Supported: {list(_ELIGIBILITY_BACKENDS)}, http. "
                     "Set ELIGIBILITY_BACKEND=mock or add the adapter to the registry."
@@ -65,7 +66,7 @@ def get_prior_auth_backend() -> PriorAuthBackend:
         else:
             impl = _PRIOR_AUTH_BACKENDS.get(name)
             if impl is None:
-                raise ValueError(
+                raise ValidationError(
                     f"Unknown PRIOR_AUTH_BACKEND={name!r}. "
                     f"Supported: {list(_PRIOR_AUTH_BACKENDS)}, http. "
                     "Set PRIOR_AUTH_BACKEND=mock or add the adapter to the registry."
@@ -86,7 +87,7 @@ def get_claims_backend() -> ClaimsBackend:
         else:
             impl = _CLAIMS_BACKENDS.get(name)
             if impl is None:
-                raise ValueError(
+                raise ValidationError(
                     f"Unknown CLAIMS_BACKEND={name!r}. "
                     "Supported: mock, http. "
                     "Set CLAIMS_BACKEND=mock or add the adapter to the registry."

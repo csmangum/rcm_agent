@@ -1,6 +1,7 @@
 """Eligibility verification crew: orchestrate eligibility tools and return EncounterOutput."""
 
 from rcm_agent.models import Encounter, EncounterOutput, EncounterStatus, RcmStage
+from rcm_agent.observability import get_logger
 from rcm_agent.tools.eligibility import (
     check_coordination_of_benefits,
     check_member_eligibility,
@@ -8,12 +9,20 @@ from rcm_agent.tools.eligibility import (
     verify_benefits,
 )
 
+logger = get_logger(__name__)
+
 
 def run_eligibility_crew(encounter: Encounter) -> EncounterOutput:
     """
     Run eligibility verification: check eligibility -> verify benefits -> COB -> flag gaps.
     Returns EncounterOutput with ELIGIBLE/NOT_ELIGIBLE and coverage details in raw_result.
     """
+    logger.info(
+        "Eligibility crew started",
+        encounter_id=encounter.encounter_id,
+        stage="ELIGIBILITY_VERIFICATION",
+        action="crew_started",
+    )
     actions: list[str] = ["check_member_eligibility"]
     payer = encounter.insurance.payer
     member_id = encounter.insurance.member_id
@@ -23,6 +32,13 @@ def run_eligibility_crew(encounter: Encounter) -> EncounterOutput:
     raw_result: dict = {"eligibility": eligibility_result}
 
     if not eligibility_result.get("eligible", True):
+        logger.info(
+            "Eligibility check complete - not eligible",
+            encounter_id=encounter.encounter_id,
+            stage="ELIGIBILITY_VERIFICATION",
+            action="check_complete",
+            result="not_eligible",
+        )
         gaps = flag_coverage_gaps(eligibility_result)
         cob = check_coordination_of_benefits(encounter.patient, encounter.insurance)
         raw_result["coordination_of_benefits"] = cob
@@ -60,6 +76,14 @@ def run_eligibility_crew(encounter: Encounter) -> EncounterOutput:
         "Eligibility verified; recommendation: proceed."
         if not gaps
         else "Eligibility verified with coverage gaps; recommendation: hold. Human review recommended."
+    )
+    logger.info(
+        "Eligibility check complete",
+        encounter_id=encounter.encounter_id,
+        stage="ELIGIBILITY_VERIFICATION",
+        action="check_complete",
+        result="eligible" if not gaps else "needs_review",
+        has_gaps=bool(gaps),
     )
     return EncounterOutput(
         encounter_id=encounter.encounter_id,

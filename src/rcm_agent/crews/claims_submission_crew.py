@@ -8,6 +8,7 @@ import json
 from typing import Any
 
 from rcm_agent.models import Encounter, EncounterOutput, EncounterStatus, RcmStage
+from rcm_agent.observability import get_logger
 from rcm_agent.tools._types import CleanClaimData, RemitStatusResult, SubmitClaimResult
 from rcm_agent.tools.claims import (
     assemble_clean_claim,
@@ -16,6 +17,8 @@ from rcm_agent.tools.claims import (
     submit_claim,
 )
 from rcm_agent.utils import save_artifact
+
+logger = get_logger(__name__)
 
 
 def run_claims_submission_crew(
@@ -34,6 +37,12 @@ def run_claims_submission_crew(
         EncounterOutput with CLAIM_SUBMITTED / CLAIM_ACCEPTED / NEEDS_REVIEW status
         and 837-style claim + remittance summary artifacts.
     """
+    logger.info(
+        "Claims submission crew started",
+        encounter_id=encounter.encounter_id,
+        stage="CLAIMS_SUBMISSION",
+        action="crew_started",
+    )
     actions: list[str] = []
     artifacts: list[str] = []
 
@@ -61,6 +70,13 @@ def run_claims_submission_crew(
 
     if not scrub_result["clean"]:
         error_summary = "; ".join(e["message"] for e in scrub_result["errors"])
+        logger.warning(
+            "Claim failed scrubbing",
+            encounter_id=encounter.encounter_id,
+            stage="CLAIMS_SUBMISSION",
+            action="scrub_failed",
+            error_summary=error_summary,
+        )
         return EncounterOutput(
             encounter_id=encounter.encounter_id,
             stage=RcmStage.CLAIMS_SUBMISSION,
@@ -120,6 +136,15 @@ def run_claims_submission_crew(
         encounter_status = EncounterStatus.CLAIM_SUBMITTED
         message = f"Claim {claim_id_display} submitted; remittance pending."
 
+    logger.info(
+        "Claims submission complete",
+        encounter_id=encounter.encounter_id,
+        stage="CLAIMS_SUBMISSION",
+        action="submission_complete",
+        result=encounter_status.value,
+        claim_id=claim_id_display,
+        remit_status=normalized_status,
+    )
     return EncounterOutput(
         encounter_id=encounter.encounter_id,
         stage=RcmStage.CLAIMS_SUBMISSION,

@@ -4,9 +4,20 @@ Call the FastAPI mock server (or any compatible API) for the real HTTP client pa
 Set ELIGIBILITY_BACKEND=http, PRIOR_AUTH_BACKEND=http, CLAIMS_BACKEND=http with RCM_MOCK_SERVER_URL.
 """
 
-from typing import Any
+from __future__ import annotations
+
+from typing import Any, cast
 
 import httpx
+
+from rcm_agent.exceptions import BackendError
+from rcm_agent.integrations._retry_utils import (
+    _RETRYABLE_HTTP_ERRORS,
+    _retry_decorator,
+)
+from rcm_agent.observability.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class _BaseHttpClient:
@@ -17,26 +28,31 @@ class _BaseHttpClient:
         self._client = client
 
     def _get(self, path: str) -> dict[str, Any]:
-        url = f"{self._base}{path}"
-        if self._client is not None:
-            resp = self._client.get(url)
-        else:
-            with httpx.Client(timeout=30.0) as c:
-                resp = c.get(url)
-        resp.raise_for_status()
-        result: dict[str, Any] = resp.json()
-        return result
+        return cast(dict[str, Any], self._request("GET", path))
 
     def _post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
+        return cast(dict[str, Any], self._request("POST", path, body=body))
+
+    @_retry_decorator()
+    def _request(self, method: str, path: str, *, body: dict[str, Any] | None = None) -> dict[str, Any]:
         url = f"{self._base}{path}"
-        if self._client is not None:
-            resp = self._client.post(url, json=body)
-        else:
-            with httpx.Client(timeout=30.0) as c:
-                resp = c.post(url, json=body)
-        resp.raise_for_status()
-        result: dict[str, Any] = resp.json()
-        return result
+        logger.info("HTTP request", method=method, url=url)
+        try:
+            if self._client is not None:
+                resp = self._client.request(method, url, json=body)
+            else:
+                with httpx.Client(timeout=30.0) as c:
+                    resp = c.request(method, url, json=body)
+            resp.raise_for_status()
+            return cast(dict[str, Any], resp.json())
+        except httpx.HTTPStatusError as exc:
+            raise BackendError(
+                f"{method} {url} returned {exc.response.status_code}",
+                backend=self._base,
+                status_code=exc.response.status_code,
+            ) from exc
+        except _RETRYABLE_HTTP_ERRORS:
+            raise
 
 
 class EligibilityHttpClient(_BaseHttpClient):

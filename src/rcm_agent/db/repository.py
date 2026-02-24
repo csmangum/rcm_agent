@@ -1,11 +1,12 @@
 """Repository for encounter persistence and audit."""
 
 import json
-import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from rcm_agent.db.connection import ConnectionManager
 from rcm_agent.db.schema import init_db
+from rcm_agent.exceptions import DatabaseError
 from rcm_agent.models import (
     ClaimSubmission,
     Encounter,
@@ -13,6 +14,9 @@ from rcm_agent.models import (
     PriorAuthRequest,
     RcmStage,
 )
+from rcm_agent.observability import get_logger
+
+logger = get_logger(__name__)
 
 
 def _now_utc() -> str:
@@ -59,12 +63,23 @@ class EncounterRepository:
     def __init__(self, db_path: str) -> None:
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         init_db(db_path)
-        self._db_path = db_path
+        self._cm = ConnectionManager(db_path)
 
-    def _conn(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self._db_path)
-        conn.execute("PRAGMA foreign_keys = ON")
-        return conn
+    @property
+    def db_path(self) -> str:
+        return self._cm.db_path
+
+    def close(self) -> None:
+        """Close the underlying connection manager and any open connections."""
+        self._cm.close()
+
+    def __enter__(self) -> "EncounterRepository":
+        """Support usage as a context manager."""
+        return self
+
+    def __exit__(self, exc_type: object, exc_val: object, exc_tb: object) -> None:
+        """Ensure resources are released when leaving a context block."""
+        self.close()
 
     def save_encounter(
         self,
@@ -74,8 +89,7 @@ class EncounterRepository:
     ) -> None:
         """Insert or replace encounter row."""
         now = _now_utc()
-        conn = self._conn()
-        try:
+        with self._cm.transaction() as conn:
             conn.execute(
                 """
                 INSERT INTO encounters (
@@ -112,14 +126,16 @@ class EncounterRepository:
                     now,
                 ),
             )
-            conn.commit()
-        finally:
-            conn.close()
+        logger.info(
+            "Encounter saved",
+            encounter_id=encounter.encounter_id,
+            stage=stage.value,
+            status=status.value,
+        )
 
     def get_encounter(self, encounter_id: str) -> dict | None:
         """Return encounter row as dict with parsed JSON fields, or None."""
-        conn = self._conn()
-        try:
+        with self._cm.connection() as conn:
             cur = conn.execute(
                 """
                 SELECT encounter_id, patient, insurance, date, type,
@@ -131,8 +147,6 @@ class EncounterRepository:
             )
             row = cur.fetchone()
             return _row_to_encounter_dict(row) if row else None
-        finally:
-            conn.close()
 
     def update_status(
         self,
@@ -144,16 +158,21 @@ class EncounterRepository:
         old_status: str | None = None,
         details: str | None = None,
     ) -> None:
-        """Update encounter status and append audit log row (transactional)."""
-        conn = self._conn()
-        try:
+        """Update encounter status and append audit log row (transactional).
+
+        Raises ``DatabaseError`` if *encounter_id* does not exist.
+        """
+        with self._cm.transaction() as conn:
             cur = conn.execute(
                 "SELECT status, stage FROM encounters WHERE encounter_id = ?",
                 (encounter_id,),
             )
             row = cur.fetchone()
             if not row:
-                return
+                raise DatabaseError(
+                    f"Cannot update status: encounter {encounter_id!r} not found",
+                    encounter_id=encounter_id,
+                )
             current_status, _current_stage = row
 
             updates = ["status = ?", "updated_at = ?"]
@@ -182,14 +201,16 @@ class EncounterRepository:
                     _now_utc(),
                 ),
             )
-            conn.commit()
-        finally:
-            conn.close()
+        logger.info(
+            "Status updated",
+            encounter_id=encounter_id,
+            action=action_description,
+            new_status=new_status.value,
+        )
 
     def get_audit_log(self, encounter_id: str) -> list[dict]:
         """Return audit log entries for encounter, oldest first."""
-        conn = self._conn()
-        try:
+        with self._cm.connection() as conn:
             cur = conn.execute(
                 """
                 SELECT id, encounter_id, action, old_status, new_status, details, created_at
@@ -212,8 +233,6 @@ class EncounterRepository:
                 }
                 for r in rows
             ]
-        finally:
-            conn.close()
 
     def save_workflow_run(
         self,
@@ -223,8 +242,7 @@ class EncounterRepository:
         workflow_output: dict,
     ) -> None:
         """Insert a workflow run record."""
-        conn = self._conn()
-        try:
+        with self._cm.transaction() as conn:
             conn.execute(
                 """
                 INSERT INTO workflow_runs
@@ -239,14 +257,10 @@ class EncounterRepository:
                     _now_utc(),
                 ),
             )
-            conn.commit()
-        finally:
-            conn.close()
 
     def save_prior_auth(self, prior_auth_request: PriorAuthRequest) -> None:
         """Insert or replace prior auth request."""
-        conn = self._conn()
-        try:
+        with self._cm.transaction() as conn:
             conn.execute(
                 """
                 INSERT INTO prior_auth_requests (
@@ -276,14 +290,10 @@ class EncounterRepository:
                     prior_auth_request.decision_date,
                 ),
             )
-            conn.commit()
-        finally:
-            conn.close()
 
     def save_claim_submission(self, claim_submission: ClaimSubmission) -> None:
         """Insert or replace claim submission."""
-        conn = self._conn()
-        try:
+        with self._cm.transaction() as conn:
             conn.execute(
                 """
                 INSERT INTO claim_submissions (
@@ -312,9 +322,6 @@ class EncounterRepository:
                     claim_submission.submitted_at,
                 ),
             )
-            conn.commit()
-        finally:
-            conn.close()
 
     def save_denial_event(
         self,
@@ -326,9 +333,8 @@ class EncounterRepository:
         claim_id: str | None = None,
         payer: str | None = None,
     ) -> None:
-        """Insert a denial event for analytics. Call only after the encounter has been saved; denial_events.encounter_id references encounters(encounter_id)."""
-        conn = self._conn()
-        try:
+        """Insert a denial event for analytics."""
+        with self._cm.transaction() as conn:
             conn.execute(
                 """
                 INSERT INTO denial_events
@@ -345,14 +351,10 @@ class EncounterRepository:
                     _now_utc(),
                 ),
             )
-            conn.commit()
-        finally:
-            conn.close()
 
     def get_denial_events(self, encounter_id: str) -> list[dict]:
         """Return denial events for an encounter, newest first."""
-        conn = self._conn()
-        try:
+        with self._cm.connection() as conn:
             cur = conn.execute(
                 """
                 SELECT id, encounter_id, claim_id, payer, reason_codes, denial_type, appeal_viable, created_at
@@ -376,13 +378,10 @@ class EncounterRepository:
                 }
                 for r in rows
             ]
-        finally:
-            conn.close()
 
     def get_denial_stats(self) -> dict:
         """Aggregate denial analytics: by reason code, denial type, payer."""
-        conn = self._conn()
-        try:
+        with self._cm.connection() as conn:
             cur = conn.execute("SELECT reason_codes, denial_type, payer FROM denial_events")
             rows = cur.fetchall()
 
@@ -417,13 +416,10 @@ class EncounterRepository:
                 "by_denial_type": by_denial_type,
                 "by_payer": by_payer,
             }
-        finally:
-            conn.close()
 
     def get_metrics(self) -> dict:
         """Aggregate counts by status and stage for metrics command."""
-        conn = self._conn()
-        try:
+        with self._cm.connection() as conn:
             cur = conn.execute("SELECT status, COUNT(*) FROM encounters GROUP BY status")
             by_status = dict(cur.fetchall())
 
@@ -455,5 +451,3 @@ class EncounterRepository:
                 "clean_rate_pct": (clean / total * 100) if total else 0.0,
                 "denial_stats": denial_stats,
             }
-        finally:
-            conn.close()
