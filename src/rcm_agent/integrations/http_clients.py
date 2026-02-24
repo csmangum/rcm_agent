@@ -9,46 +9,15 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
-from tenacity import (
-    retry,
-    retry_if_exception,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
 
 from rcm_agent.exceptions import BackendError
+from rcm_agent.integrations._retry_utils import (
+    _RETRYABLE_HTTP_ERRORS,
+    _retry_decorator,
+)
 from rcm_agent.observability.logging import get_logger
 
 logger = get_logger(__name__)
-
-_RETRYABLE_HTTP_ERRORS = (
-    httpx.ConnectError,
-    httpx.ReadTimeout,
-    httpx.WriteTimeout,
-    httpx.PoolTimeout,
-    httpx.ConnectTimeout,
-)
-
-
-_RETRYABLE_STATUS_CODES = {502, 503, 504}
-
-
-def _is_retryable(exc: BaseException) -> bool:
-    if isinstance(exc, _RETRYABLE_HTTP_ERRORS):
-        return True
-    if isinstance(exc, BackendError) and exc.status_code in _RETRYABLE_STATUS_CODES:
-        return True
-    return False
-
-
-def _retry_decorator():  # type: ignore[no-untyped-def]
-    return retry(
-        retry=retry_if_exception(_is_retryable),
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
-        reraise=True,
-    )
 
 
 class _BaseHttpClient:
