@@ -11,10 +11,9 @@
   "ENC-002": {
     "expected_stages": [
       "PRIOR_AUTHORIZATION",
-      "CODING_CHARGE_CAPTURE",
-      "CLAIMS_SUBMISSION"
+      "CODING_CHARGE_CAPTURE"
     ],
-    "expected_final_status": "CLAIM_SUBMITTED",
+    "expected_final_status": "NEEDS_REVIEW",
     "needs_prior_auth": true,
     "expected_auth_outcome": "approved",
     "description": "MRI knee with prior auth (UnitedHealthcare)"

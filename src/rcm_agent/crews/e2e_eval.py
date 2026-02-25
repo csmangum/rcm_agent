@@ -395,6 +395,9 @@ def _run_e2e_pass(
             is_success = escalated and last is not None and final_status == (expected_final or "NEEDS_REVIEW")
         elif expected_final and expected_final in (s.value for s in _FAILURE_STATUSES):
             is_success = not escalated and last is not None and final_status == expected_final
+        elif expected_final == "NEEDS_REVIEW":
+            # Golden explicitly expects NEEDS_REVIEW (e.g. ENC-002: pipeline stops after coding)
+            is_success = not escalated and last is not None and final_status == "NEEDS_REVIEW"
         else:
             is_success = (
                 not escalated

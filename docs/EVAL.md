@@ -145,6 +145,20 @@ The eval suite covers the RCM agentic system within practical scope. Some behavi
 - **Claim readiness:** Fraction that reached claims submission; depends on prior stages completing successfully.
 - **Escalation alignment:** When golden has `expected_escalation: true`, success = pipeline correctly escalated (e.g. ENC-003).
 
+### Router eval: disagreement report
+
+The router eval compares **heuristic vs LLM** routing and is used as a **disagreement / diagnostic signal**, not as a pass/fail gate. The **pipeline uses the heuristic** by default (with optional LLM fallback when heuristic confidence is low). A low heuristic–LLM agreement rate can be acceptable as long as e2e outcomes are acceptable. Use the router report to identify encounters where heuristic and LLM disagree; tune rules or prompts if needed, but do not treat agreement rate as a blocking metric.
+
+### Regression baseline
+
+After the eval suite is aligned with intended behavior, the following baseline applies:
+
+- **E2E pipeline success rate:** 100% (8/8 encounters).
+- **Final status alignment:** 100% for encounters with a golden `expected_final_status` (6/6).
+- **Router alignment and auth outcome alignment:** As reported; use for diagnostics.
+
+Running `rcm-agent eval-all -o reports` (with `OPENAI_API_KEY` set) is the standard way to check for regressions. Reports are written to `reports/`. Any drop in e2e success rate or final status alignment should be investigated.
+
 ## Optional: RAG and HTTP backends
 
 **RAG:** Set `RCM_RAG_BACKEND=rag` and ensure Chroma index is available. Eval will use RAG for coding/prior-auth; report records whether RAG was used but does not include retrieval quality metrics.
