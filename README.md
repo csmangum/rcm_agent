@@ -22,7 +22,7 @@ cp .env.example .env
 ### RAG (coding guidelines and payer policies)
 
 - **Default:** `RCM_RAG_BACKEND=mock` uses canned snippets; no Chroma index required.
-- **Real RAG:** Set `RCM_RAG_BACKEND=rag` and ensure a populated Chroma index (e.g. run `medicare_rag` ingest). Set `RCM_RAG_CHROMA_DIR` to the Chroma directory; `~` is expanded and the default is `~/medicare_rag/data/chroma`.
+- **Real RAG:** Set `RCM_RAG_BACKEND=rag` and ensure a populated Chroma index (e.g. run `insurance_rag` ingest). Set `RCM_RAG_CHROMA_DIR` to the Chroma directory; `~` is expanded and the default is `~/insurance_rag/data/chroma`.
 
 ### Eligibility and prior-auth backends
 

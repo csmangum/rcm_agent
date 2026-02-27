@@ -86,7 +86,7 @@ def test_get_rag_config_default(monkeypatch: pytest.MonkeyPatch) -> None:
     assert config["backend"] == "mock"
     assert "chroma_dir" in config
     assert config["chroma_dir"].name == "chroma"
-    assert "medicare_rag" in str(config["chroma_dir"])
+    assert "insurance_rag" in str(config["chroma_dir"])
 
 
 def test_get_rag_config_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -100,9 +100,9 @@ def test_get_rag_config_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_get_rag_config_expands_user_home(monkeypatch: pytest.MonkeyPatch) -> None:
     """RCM_RAG_CHROMA_DIR with ~ expands to user home."""
-    monkeypatch.setenv("RCM_RAG_CHROMA_DIR", "~/medicare_rag/data/chroma")
+    monkeypatch.setenv("RCM_RAG_CHROMA_DIR", "~/insurance_rag/data/chroma")
     config = get_rag_config()
-    expected = Path.home() / "medicare_rag" / "data" / "chroma"
+    expected = Path.home() / "insurance_rag" / "data" / "chroma"
     assert config["chroma_dir"] == expected
 
 

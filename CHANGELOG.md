@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Heuristic encounter router with escalation logic
 - SQLite persistence with audit trail
 - Protocol-based integration layer with mock and HTTP backends
-- RAG infrastructure (mock and ChromaDB via medicare_rag)
+- RAG infrastructure (mock and ChromaDB via insurance_rag)
 - CLI interface: `process`, `status`, `history`, `metrics`, `denial-stats`, `serve-mock`
 - FastAPI mock server for eligibility and prior-auth HTTP testing
 - 6 synthetic encounter examples

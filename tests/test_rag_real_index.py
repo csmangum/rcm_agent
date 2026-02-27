@@ -1,7 +1,7 @@
-"""Integration tests: RAG tools against the real medicare_rag Chroma index.
+"""Integration tests: RAG tools against the real insurance_rag Chroma index.
 
-Run only when the index exists (e.g. RCM_RAG_CHROMA_DIR or ~/medicare_rag/data/chroma).
-Skip when index is missing or medicare_rag is not installed so CI without the index still passes.
+Run only when the index exists (e.g. RCM_RAG_CHROMA_DIR or ~/insurance_rag/data/chroma).
+Skip when index is missing or insurance_rag is not installed so CI without the index still passes.
 Skip when index exists but Chroma cannot connect (version mismatch, rust panic, or tenant error).
 
 Run with: pytest tests/test_rag_real_index.py -v
@@ -13,8 +13,8 @@ from pathlib import Path
 
 import pytest
 
-# Default location of medicare_rag Chroma index
-_DEFAULT_CHROMA = Path.home() / "medicare_rag" / "data" / "chroma"
+# Default location of insurance_rag Chroma index
+_DEFAULT_CHROMA = Path.home() / "insurance_rag" / "data" / "chroma"
 
 
 def _get_real_chroma_dir() -> Path | None:
@@ -23,9 +23,9 @@ def _get_real_chroma_dir() -> Path | None:
     return path if path.exists() else None
 
 
-def _medicare_rag_available() -> bool:
+def _insurance_rag_available() -> bool:
     try:
-        import medicare_rag  # noqa: F401
+        import insurance_rag  # noqa: F401
 
         return True
     except ImportError:
@@ -37,7 +37,7 @@ def _probe_chroma_connection(chroma_dir: Path) -> tuple[bool, str]:
     prev_data_dir = os.environ.get("DATA_DIR")
     try:
         os.environ["DATA_DIR"] = str(chroma_dir.parent)
-        from medicare_rag.query.retriever import get_retriever
+        from insurance_rag.query.retriever import get_retriever
 
         retriever = get_retriever(k=5)
         retriever.invoke("test")
@@ -46,7 +46,7 @@ def _probe_chroma_connection(chroma_dir: Path) -> tuple[bool, str]:
         # PanicException (Chroma rust panic) does not inherit from Exception
         err = f"{type(e).__name__}: {e}"
         if "default_tenant" in err or "PanicException" in type(e).__name__:
-            hint = " (upgrade chromadb, run 'chromadb utils vacuum' on the index, or recreate with medicare_rag)"
+            hint = " (upgrade chromadb, run 'chromadb utils vacuum' on the index, or recreate with insurance_rag)"
         else:
             hint = ""
         return (False, err + hint)
@@ -68,17 +68,17 @@ def _chroma_connection_works() -> tuple[bool, str]:
     if _chroma_connection_ok is not None:
         return (_chroma_connection_ok, _chroma_connection_reason)
     chroma_dir = _get_real_chroma_dir()
-    if not chroma_dir or not _medicare_rag_available():
+    if not chroma_dir or not _insurance_rag_available():
         _chroma_connection_ok = False
-        _chroma_connection_reason = "Real Chroma index not found or medicare_rag not installed"
+        _chroma_connection_reason = "Real Chroma index not found or insurance_rag not installed"
         return (_chroma_connection_ok, _chroma_connection_reason)
     _chroma_connection_ok, _chroma_connection_reason = _probe_chroma_connection(chroma_dir)
     return (_chroma_connection_ok, _chroma_connection_reason)
 
 
 _skip_if_no_real_index = pytest.mark.skipif(
-    _get_real_chroma_dir() is None or not _medicare_rag_available(),
-    reason="Real Chroma index not found or medicare_rag not installed (set RCM_RAG_CHROMA_DIR or create ~/medicare_rag/data/chroma, pip install -e medicare_rag)",
+    _get_real_chroma_dir() is None or not _insurance_rag_available(),
+    reason="Real Chroma index not found or insurance_rag not installed (set RCM_RAG_CHROMA_DIR or create ~/insurance_rag/data/chroma, pip install -e insurance_rag)",
 )
 
 
